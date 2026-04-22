@@ -23,6 +23,18 @@ public class CategoryDTO {
         this.id = id;
         this.name = name;
     }
+    @Override
+public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
+    CategoryDTO other = (CategoryDTO) obj;
+    return this.id == other.id; // So sánh dựa trên ID danh mục
+}
+
+@Override
+public int hashCode() {
+    return java.util.Objects.hash(id);
+}
 
     public int getId() { return id; }
     public String getName() { return name; }
@@ -30,6 +42,6 @@ public class CategoryDTO {
 
     @Override
     public String toString() {
-        return name; // để show trong JComboBox
+        return name;
     }
 }
