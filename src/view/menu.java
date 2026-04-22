@@ -46,8 +46,8 @@ public class menu extends JFrame{
         JButton btnCategory = new JButton(" Quản lý loại sản phẩm");
         JButton btnProduct = new JButton(" Quản lý sản phẩm");
         JButton btnTable = new JButton(" Quản lý đơn hàng ");
-        JButton btnDatban = new JButton(" Danh sách đặt bàn ");
-        JButton btnAccount = new JButton(" Quản lý tài khoản nhân viên");
+        JButton btnDatban = new JButton(" Danh sách Nhà cung cấp ");
+        JButton btnAccount = new JButton(" Quản lý tài khoản ");
         JButton btnEmployee = new JButton(" Quản lý kho hàng");
         JButton btnRevenue = new JButton(" Quản lý thống kê");
         JButton btnLogout = new JButton(" Đăng xuất");
@@ -69,7 +69,7 @@ public class menu extends JFrame{
         btnCategory.addActionListener(e -> showPanel(new CategoryJframe()));
         btnProduct.addActionListener(e -> showPanel(new ProductJframe()));
         btnTable.addActionListener(e -> showPanel(new OrderJFrame()));
-//        btnDatban.addActionListener(e -> showPanel(new dsbanadmin()));
+        btnDatban.addActionListener(e -> showPanel(new VendorJFrame()));
         btnAccount.addActionListener(e -> showPanel(new UserJframe()));
         btnEmployee.addActionListener(e -> showPanel(new InventoryJFrame()));
         btnRevenue.addActionListener(e -> showPanel(new RevenueJFrame()));
