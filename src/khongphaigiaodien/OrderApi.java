@@ -71,4 +71,26 @@ public class OrderApi {
             return false;
         }
     }
+    // Thêm hàm này vào dưới cùng của OrderApi.java
+    public static boolean returnOrder(int orderId, String reason, String condition) {
+        try {
+            JSONObject json = new JSONObject();
+            json.put("reason", reason);
+            json.put("condition", condition); // "GOOD" hoặc "BAD"
+
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:3000/api/orders/" + orderId + "/return"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + AuthSession.token)
+                    .PUT(HttpRequest.BodyPublishers.ofString(json.toString()))
+                    .build();
+
+            HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString());
+            return res.statusCode() == 200;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
