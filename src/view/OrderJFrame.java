@@ -38,8 +38,7 @@ public class OrderJFrame extends JPanel{
         lblFilter.setFont(new Font("Segoe UI", Font.BOLD, 13));
         topPanel.add(lblFilter);
         
-        // Thêm trạng thái RETURNED vào bộ lọc
-        cbbFilter = new JComboBox<>(new String[]{"Tất cả", "NEW", "CONFIRMED", "SHIPPING", "DONE", "RETURNED", "CANCELLED"});
+        cbbFilter = new JComboBox<>(new String[]{"Tất cả", "NEW", "CONFIRMED", "SHIPPING", "DONE", "RETURN_REQUESTED", "RETURNED", "CANCELLED"});
         cbbFilter.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         cbbFilter.setBackground(Color.WHITE);
         topPanel.add(cbbFilter);
@@ -50,7 +49,6 @@ public class OrderJFrame extends JPanel{
         
         topPanel.add(Box.createHorizontalStrut(20));
 
-        // Các nút hành động
         JButton btnConfirm = new JButton("Duyệt Đơn");
         styleButton(btnConfirm, new Color(46, 204, 113));
 
@@ -60,17 +58,16 @@ public class OrderJFrame extends JPanel{
         JButton btnDone = new JButton("Hoàn Tất");
         styleButton(btnDone, new Color(39, 174, 96));
 
+        JButton btnReturn = new JButton("Xử Lý Hoàn Trả");
+        styleButton(btnReturn, new Color(155, 89, 182)); 
+
         JButton btnCancel = new JButton("Hủy Đơn");
         styleButton(btnCancel, new Color(231, 76, 60));
-
-        // NÚT MỚI: HOÀN TRẢ
-        JButton btnReturn = new JButton("Hoàn Trả");
-        styleButton(btnReturn, new Color(155, 89, 182)); // Màu tím chuyên nghiệp
 
         topPanel.add(btnConfirm);
         topPanel.add(btnShip);
         topPanel.add(btnDone);
-        topPanel.add(btnReturn); // Thêm nút Hoàn trả vào thanh công cụ
+        topPanel.add(btnReturn); 
         topPanel.add(btnCancel);
 
         add(topPanel, BorderLayout.NORTH);
@@ -85,13 +82,17 @@ public class OrderJFrame extends JPanel{
         table = new JTable(model);
         styleTable(table);
 
-        // Đánh dấu đơn hàng mới (Highlight NEW)
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 String status = (String) table.getModel().getValueAt(row, 6);
-                if ("NEW".equals(status)) {
+                
+                if ("RETURN_REQUESTED".equals(status)) {
+                    c.setBackground(new Color(255, 235, 238));
+                    c.setForeground(new Color(192, 57, 43));
+                    c.setFont(c.getFont().deriveFont(Font.BOLD));
+                } else if ("NEW".equals(status)) {
                     c.setBackground(new Color(255, 248, 225));
                     c.setForeground(new Color(211, 84, 0));
                     c.setFont(c.getFont().deriveFont(Font.BOLD));
@@ -128,10 +129,8 @@ public class OrderJFrame extends JPanel{
         btnDone.addActionListener(e -> changeStatus("DONE"));
         btnCancel.addActionListener(e -> changeStatus("CANCELLED"));
         
-        // Sự kiện cho nút Hoàn trả
         btnReturn.addActionListener(e -> showReturnDialog());
 
-        // Tự động làm mới mỗi 5 giây
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -145,19 +144,19 @@ public class OrderJFrame extends JPanel{
         SwingUtilities.invokeLater(() -> {
             List<OrderDTO> orders = OrderApi.getAllOrders();
             String filter = (String) cbbFilter.getSelectedItem();
-            int newOrderCount = 0;
-            for(OrderDTO o : orders) if("NEW".equals(o.getStatus())) newOrderCount++;
+            int reqCount = 0;
+            for(OrderDTO o : orders) if("RETURN_REQUESTED".equals(o.getStatus())) reqCount++;
             
-            if (newOrderCount > currentOrderCount) Toolkit.getDefaultToolkit().beep();
-            currentOrderCount = newOrderCount;
-            lblStatus.setText("Cập nhật: " + java.time.LocalTime.now() + " | Đơn mới: " + newOrderCount);
+            if (reqCount > currentOrderCount) Toolkit.getDefaultToolkit().beep();
+            currentOrderCount = reqCount;
+            lblStatus.setText("Cập nhật: " + java.time.LocalTime.now() + " | Yêu cầu trả hàng mới: " + reqCount);
 
             model.setRowCount(0);
             for (OrderDTO o : orders) {
                 if ("Tất cả".equals(filter) || o.getStatus().equals(filter)) {
                     model.addRow(new Object[]{ 
                         o.getId(), o.getReceiverName(), o.getPhone(), o.getAddress(), 
-                        String.format("%,.0f đ", o.getTotalAmount()), o.getPaymentMethod(), 
+                        o.getTotalAmount(), o.getPaymentMethod(), 
                         o.getStatus(), o.getCreatedAt() 
                     });
                 }
@@ -178,45 +177,72 @@ public class OrderJFrame extends JPanel{
         }
     }
 
-    // LOGIC XỬ LÝ HOÀN TRẢ
+    // --- LOGIC XỬ LÝ HOÀN TRẢ VỚI 3 NÚT ---
     private void showReturnDialog() {
         int row = table.getSelectedRow();
-        if (row == -1) { JOptionPane.showMessageDialog(this, "Chọn đơn hàng muốn hoàn trả!"); return; }
+        if (row == -1) { JOptionPane.showMessageDialog(this, "Chọn đơn hàng muốn xử lý!"); return; }
 
         int orderId = (int) model.getValueAt(row, 0);
         String currentStatus = (String) model.getValueAt(row, 6);
 
-        // Kiểm tra điều kiện: Thường chỉ cho hoàn trả đơn đã hoàn tất (DONE) hoặc đang giao (SHIPPING)
-        if ("CANCELLED".equals(currentStatus) || "RETURNED".equals(currentStatus)) {
-            JOptionPane.showMessageDialog(this, "Đơn hàng này không thể thực hiện hoàn trả!");
+        if (!"RETURN_REQUESTED".equals(currentStatus)) {
+            JOptionPane.showMessageDialog(this, "Chỉ xử lý được những đơn đang có Yêu cầu trả hàng (RETURN_REQUESTED)!");
             return;
         }
 
-        JTextField txtReason = new JTextField();
-        String[] conditions = {"Hàng Tốt (Cộng lại vào kho bán tiếp)", "Hàng Lỗi (Không cộng lại kho)"};
+        String khachYeuCau = OrderApi.getOrderReturnReason(orderId);
+
+        JTextArea txtKhach = new JTextArea(4, 30);
+        txtKhach.setText(khachYeuCau);
+        txtKhach.setEditable(false);
+        txtKhach.setLineWrap(true);
+        txtKhach.setWrapStyleWord(true);
+        txtKhach.setBackground(new java.awt.Color(240, 240, 240));
+        JScrollPane scrollKhach = new JScrollPane(txtKhach);
+
+        JTextField txtAdminNote = new JTextField();
+        String[] conditions = {"Hàng Tốt (Cộng lại vào kho)", "Hàng Lỗi (Không cộng kho)"};
         JComboBox<String> cbCondition = new JComboBox<>(conditions);
 
         Object[] form = {
-            "Lý do hoàn trả:", txtReason,
-            "Tình trạng sản phẩm:", cbCondition
+            "Lý do khách hàng yêu cầu:", scrollKhach,
+            "Ghi chú của Shop (Gửi vào Email khách):", txtAdminNote,
+            "Tình trạng sản phẩm (Chỉ dùng nếu Chấp nhận):", cbCondition
         };
 
-        int result = JOptionPane.showConfirmDialog(this, form, "Xử lý Hoàn trả Đơn #" + orderId, JOptionPane.OK_CANCEL_OPTION);
+        // Tạo 3 nút tùy chỉnh
+        Object[] options = {"Chấp nhận hoàn trả", "Từ chối trả hàng", "Hủy bỏ"};
         
-        if (result == JOptionPane.OK_OPTION) {
-            String reason = txtReason.getText().trim();
-            if (reason.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Bạn phải nhập lý do hoàn trả!");
-                return;
-            }
+        int res = JOptionPane.showOptionDialog(this, form, 
+                "Duyệt Hoàn trả Đơn #" + orderId,
+                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, 
+                null, options, options[0]);
 
-            String condition = (cbCondition.getSelectedIndex() == 0) ? "GOOD" : "BAD";
-
-            if (OrderApi.returnOrder(orderId, reason, condition)) {
-                JOptionPane.showMessageDialog(this, "Đã xử lý hoàn trả và ghi nhận lịch sử kho!");
+        if (res == 0) { 
+            // BẤM: CHẤP NHẬN
+            String adminNote = txtAdminNote.getText().trim();
+            String condition = cbCondition.getSelectedIndex() == 0 ? "GOOD" : "BAD";
+            
+            if (OrderApi.processReturn(orderId, "ACCEPT", adminNote, condition)) {
+                JOptionPane.showMessageDialog(this, "Đã CHẤP NHẬN! Tiền hoàn, kho cập nhật và Email đã được gửi.");
                 loadOrders();
             } else {
-                JOptionPane.showMessageDialog(this, "Thao tác thất bại, vui lòng kiểm tra lại server!");
+                JOptionPane.showMessageDialog(this, "Lỗi server, vui lòng kiểm tra lại Node.js!");
+            }
+            
+        } else if (res == 1) { 
+            // BẤM: TỪ CHỐI
+            String adminNote = txtAdminNote.getText().trim();
+            if (adminNote.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Bắt buộc phải nhập 'Ghi chú của Shop' để giải thích lý do Từ chối!");
+                return; 
+            }
+            
+            if (OrderApi.processReturn(orderId, "REJECT", adminNote, "")) {
+                JOptionPane.showMessageDialog(this, "Đã TỪ CHỐI! Đơn chuyển về DONE và Email đã được gửi.");
+                loadOrders();
+            } else {
+                JOptionPane.showMessageDialog(this, "Lỗi server, vui lòng kiểm tra lại Node.js!");
             }
         }
     }

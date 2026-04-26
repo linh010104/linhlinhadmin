@@ -23,7 +23,7 @@ public class OrderApi {
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/orders"))
+                    .uri(URI.create("http://localhost:3000/api/orders/admin/all")) // Gọi đúng API của admin
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .GET()
                     .build();
@@ -58,7 +58,7 @@ public class OrderApi {
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/orders/" + orderId + "/status"))
+                    .uri(URI.create("http://localhost:3000/api/orders/" + orderId + "/admin-status"))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .PUT(HttpRequest.BodyPublishers.ofString(json))
@@ -71,19 +71,20 @@ public class OrderApi {
             return false;
         }
     }
-    // Thêm hàm này vào dưới cùng của OrderApi.java
-    public static boolean returnOrder(int orderId, String reason, String condition) {
+
+    public static boolean processReturn(int orderId, String action, String adminNote, String condition) {
         try {
-            JSONObject json = new JSONObject();
-            json.put("reason", reason);
-            json.put("condition", condition); // "GOOD" hoặc "BAD"
+            JSONObject body = new JSONObject();
+            body.put("action", action);
+            body.put("adminNote", adminNote);
+            body.put("condition", condition);
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/orders/" + orderId + "/return"))
+                    .uri(URI.create("http://localhost:3000/api/orders/" + orderId + "/process-return"))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + AuthSession.token)
-                    .PUT(HttpRequest.BodyPublishers.ofString(json.toString()))
+                    .PUT(HttpRequest.BodyPublishers.ofString(body.toString()))
                     .build();
 
             HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString());
@@ -92,5 +93,26 @@ public class OrderApi {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public static String getOrderReturnReason(int orderId) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:3000/api/orders/" + orderId))
+                    .header("Authorization", "Bearer " + AuthSession.token)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString());
+
+            if (res.statusCode() == 200) {
+                JSONObject obj = new JSONObject(res.body());
+                return obj.optString("return_reason", "Không có lý do từ khách");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "Không tải được lý do";
     }
 }
