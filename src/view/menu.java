@@ -66,7 +66,7 @@ public class menu extends JFrame{
         contentPanel.setBackground(Color.WHITE);
         add(contentPanel, BorderLayout.CENTER);
 
-        btnCategory.addActionListener(e -> showPanel(new CategoryJframe()));
+        btnCategory.addActionListener(e -> showPanel(new CategoryBrandJframe()));
         btnProduct.addActionListener(e -> showPanel(new ProductJframe()));
         btnTable.addActionListener(e -> showPanel(new OrderJFrame()));
         btnDatban.addActionListener(e -> showPanel(new VendorJFrame()));
