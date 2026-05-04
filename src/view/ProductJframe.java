@@ -45,16 +45,22 @@ public class ProductJframe extends JPanel{
         JButton btnUploadImage = new JButton("Thêm ảnh");
         styleButton(btnUploadImage, new Color(102, 51, 153));
 
+        // NÚT MỚI: QUẢN LÝ PHIÊN BẢN
+        JButton btnManageVariants = new JButton("Quản lý phiên bản");
+        styleButton(btnManageVariants, new Color(0, 102, 204)); // Màu xanh dương
+
         btnAdd.addActionListener(e -> showAddDialog());
         btnEdit.addActionListener(e -> showEditDialog());
         btnDelete.addActionListener(e -> deleteSelected());
         btnUploadImage.addActionListener(e -> uploadImage());
+        btnManageVariants.addActionListener(e -> showVariantDialog());
 
         topPanel.add(btnAdd);
         topPanel.add(btnEdit);
         topPanel.add(btnDelete);
         topPanel.add(Box.createHorizontalStrut(20));
         topPanel.add(btnUploadImage);
+        topPanel.add(btnManageVariants);
 
         add(topPanel, BorderLayout.NORTH);
 
@@ -64,7 +70,6 @@ public class ProductJframe extends JPanel{
             public boolean isCellEditable(int row, int column) { return false; }
         };
         
-        // Thêm cột "CatID" ở cuối (index 10) để lưu trữ ID danh mục ẩn
         model.setColumnIdentifiers(new String[]{ 
             "ID", "Tên", "SKU", "Giá bán", "Giá nhập", "Tồn kho", "Bảo hành", "Thông số", "Ghi chú", "Trạng thái", "CatID" 
         });
@@ -72,7 +77,6 @@ public class ProductJframe extends JPanel{
         table = new JTable(model);
         styleTable(table);
         
-        // Ẩn cột CatID (index 10) để người dùng không nhìn thấy, nhưng máy vẫn dùng được
         table.getColumnModel().getColumn(10).setMinWidth(0);
         table.getColumnModel().getColumn(10).setMaxWidth(0);
         table.getColumnModel().getColumn(10).setPreferredWidth(0);
@@ -90,7 +94,6 @@ public class ProductJframe extends JPanel{
         if (json == null || json.length() < 5) return;
         model.setRowCount(0);
         
-        // Cách xử lý chuỗi JSON thủ công của Linh
         JSONArray arr = new JSONArray(json); 
         for (int i = 0; i < arr.length(); i++) {
             JSONObject p = arr.getJSONObject(i);
@@ -105,10 +108,117 @@ public class ProductJframe extends JPanel{
                 p.optString("specifications", ""), 
                 p.optString("description", ""), 
                 p.optInt("status") == 1 ? "Đang bán" : "Ẩn",
-                p.optInt("category_id", -1) // Cất ID danh mục vào đây
+                p.optInt("category_id", -1) 
             });
         }
     }
+
+    // ==========================================
+    // LOGIC QUẢN LÝ PHIÊN BẢN (MỚI)
+    // ==========================================
+    private void showVariantDialog() {
+        int row = table.getSelectedRow();
+        if (row == -1) { 
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn 1 sản phẩm để quản lý phiên bản!"); 
+            return; 
+        }
+        
+        int productId = (int) model.getValueAt(row, 0);
+        String productName = model.getValueAt(row, 1).toString();
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Phiên bản: " + productName, true);
+        dialog.setSize(600, 500);
+        dialog.setLayout(new BorderLayout());
+        dialog.setLocationRelativeTo(this);
+
+        // --- NỬA TRÊN: FORM THÊM MỚI ---
+        JPanel panelTop = new JPanel(new GridLayout(5, 2, 10, 10));
+        panelTop.setBorder(BorderFactory.createTitledBorder("Thêm Phiên Bản Mới"));
+
+        JComboBox<String> cbGroup = new JComboBox<>(new String[]{"Dung lượng", "Màu sắc", "Cấu hình", "Loại Switch"});
+        JTextField txtName = new JTextField();
+        JTextField txtPrice = new JTextField("0");
+        JTextField txtStock = new JTextField("0");
+        JButton btnSaveVariant = new JButton("Thêm Phiên Bản");
+        styleButton(btnSaveVariant, new Color(0, 153, 76));
+
+        panelTop.add(new JLabel("Nhóm (VD: Màu sắc):")); panelTop.add(cbGroup);
+        panelTop.add(new JLabel("Tên (VD: Đen, 256GB):")); panelTop.add(txtName);
+        panelTop.add(new JLabel("Giá cộng thêm:")); panelTop.add(txtPrice);
+        panelTop.add(new JLabel("Số lượng kho:")); panelTop.add(txtStock);
+        panelTop.add(new JLabel("")); panelTop.add(btnSaveVariant);
+        
+        dialog.add(panelTop, BorderLayout.NORTH);
+
+        // --- NỬA DƯỚI: DANH SÁCH ---
+        DefaultTableModel varModel = new DefaultTableModel(new String[]{"ID", "Nhóm", "Tên", "Giá thêm", "Tồn kho"}, 0){
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        JTable varTable = new JTable(varModel);
+        styleTable(varTable);
+        dialog.add(new JScrollPane(varTable), BorderLayout.CENTER);
+
+        // Nút Xóa nằm ở dưới cùng
+        JPanel panelBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton btnDelVariant = new JButton("Xóa Phiên Bản Đang Chọn");
+        styleButton(btnDelVariant, new Color(220, 53, 69));
+        panelBottom.add(btnDelVariant);
+        dialog.add(panelBottom, BorderLayout.SOUTH);
+
+        // Hàm load dữ liệu vào bảng con
+        Runnable loadVariants = () -> {
+            varModel.setRowCount(0);
+            String jsonDetail = ProductApi.getProductDetail(productId);
+            if(jsonDetail != null) {
+                try {
+                    JSONObject obj = new JSONObject(jsonDetail);
+                    if(obj.has("variants")) {
+                        JSONArray vars = obj.getJSONArray("variants");
+                        for(int i=0; i<vars.length(); i++) {
+                            JSONObject v = vars.getJSONObject(i);
+                            varModel.addRow(new Object[]{
+                                v.getInt("id"), v.optString("variant_group"), v.optString("variant_name"),
+                                v.optDouble("additional_price", 0), v.optInt("stock_quantity", 0)
+                            });
+                        }
+                    }
+                } catch(Exception ex) { ex.printStackTrace(); }
+            }
+        };
+
+        // Bắt sự kiện nút Thêm
+        btnSaveVariant.addActionListener(e -> {
+            if(txtName.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Tên không được để trống!"); return;
+            }
+            boolean ok = ProductApi.addVariant(productId, cbGroup.getSelectedItem().toString(), txtName.getText(), 
+                                               Double.parseDouble(txtPrice.getText()), Integer.parseInt(txtStock.getText()));
+            if(ok) {
+                txtName.setText(""); txtPrice.setText("0"); txtStock.setText("0");
+                loadVariants.run();
+                JOptionPane.showMessageDialog(dialog, "Thêm thành công!");
+            }
+        });
+
+        // Bắt sự kiện nút Xóa
+        btnDelVariant.addActionListener(e -> {
+            int vRow = varTable.getSelectedRow();
+            if(vRow == -1) { JOptionPane.showMessageDialog(dialog, "Chọn phiên bản để xóa!"); return; }
+            int varId = (int) varModel.getValueAt(vRow, 0);
+            if(JOptionPane.showConfirmDialog(dialog, "Xóa phiên bản này?") == JOptionPane.YES_OPTION) {
+                if(ProductApi.deleteVariant(varId)) loadVariants.run();
+            }
+        });
+
+        // Load data lần đầu mở lên
+        loadVariants.run();
+        dialog.setVisible(true);
+    }
+
+    // ==========================================
+    // CÁC HÀM CŨ GIỮ NGUYÊN (Không đổi)
+    // ==========================================
 
     private void showEditDialog() {
         int row = table.getSelectedRow();
@@ -129,8 +239,7 @@ public class ProductJframe extends JPanel{
         List<CategoryDTO> allCats = CategoryApi.getAllCategories();
         for (CategoryDTO c : allCats) cbCategory.addItem(c);
         
-        // --- LOGIC QUAN TRỌNG: Tự động chọn đúng danh mục hiện tại ---
-        int currentCatId = (int) model.getValueAt(row, 10); // Lấy từ cột ẩn
+        int currentCatId = (int) model.getValueAt(row, 10); 
         for (int i = 0; i < cbCategory.getItemCount(); i++) {
             if (cbCategory.getItemAt(i).getId() == currentCatId) {
                 cbCategory.setSelectedIndex(i);

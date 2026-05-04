@@ -23,24 +23,20 @@ public class ProductApi {
      public static String getAllProducts() {
         try {
             HttpClient client = HttpClient.newHttpClient();
-
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("http://localhost:3000/api/products"))
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .GET()
                     .build();
-
-            HttpResponse<String> response =
-                    client.send(request, HttpResponse.BodyHandlers.ofString());
-
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return response.body();
-
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
-     public static boolean createProduct(
+    
+    public static boolean createProduct(
         String name, String sku, double price, double importPrice, int stockQuantity,
         int warranty, int categoryId, String description, String specifications, int brandId, int status
     ) {
@@ -76,6 +72,7 @@ public class ProductApi {
             return false;
         }
     }
+    
     public static boolean updateProduct(
             int id, String name, String sku, double price, double importPrice, int stockQuantity, 
             int warranty, int categoryId, String description, String specifications, int brandId, int status) {
@@ -108,58 +105,115 @@ public class ProductApi {
         } catch (Exception e) { e.printStackTrace(); return false; }
     }
 
-public static boolean deleteProduct(int id) {
-    try {
-        HttpClient client = HttpClient.newHttpClient();
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:3000/api/products/" + id))
-                .header("Authorization", "Bearer " + AuthSession.token)
-                .DELETE()
-                .build();
-
-        HttpResponse<String> response =
-                client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        return response.statusCode() == 200;
-
-    } catch (Exception e) {
-        e.printStackTrace();
-        return false;
+    public static boolean deleteProduct(int id) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:3000/api/products/" + id))
+                    .header("Authorization", "Bearer " + AuthSession.token)
+                    .DELETE()
+                    .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
-}
-public static boolean uploadImage(int productId, File file) {
-    try {
-        String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
-        URL url = new URL("http://localhost:3000/api/product-images/" + productId);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
-        conn.setDoOutput(true);
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+    public static boolean uploadImage(int productId, File file) {
+        try {
+            String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
+            URL url = new URL("http://localhost:3000/api/product-images/" + productId);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
-        OutputStream out = conn.getOutputStream();
-        PrintWriter writer = new PrintWriter(new OutputStreamWriter(out, "UTF-8"), true);
+            conn.setDoOutput(true);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
 
-        writer.append("--").append(boundary).append("\r\n");
-        writer.append("Content-Disposition: form-data; name=\"image\"; filename=\"")
-              .append(file.getName()).append("\"\r\n");
-        writer.append("Content-Type: image/jpeg\r\n\r\n");
-        writer.flush();
+            OutputStream out = conn.getOutputStream();
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(out, "UTF-8"), true);
 
-        Files.copy(file.toPath(), out);
-        out.flush();
+            writer.append("--").append(boundary).append("\r\n");
+            writer.append("Content-Disposition: form-data; name=\"image\"; filename=\"")
+                  .append(file.getName()).append("\"\r\n");
+            writer.append("Content-Type: image/jpeg\r\n\r\n");
+            writer.flush();
 
-        writer.append("\r\n").flush();
-        writer.append("--").append(boundary).append("--\r\n");
-        writer.close();
+            Files.copy(file.toPath(), out);
+            out.flush();
 
-        return conn.getResponseCode() == 200;
-    } catch (Exception e) {
-        e.printStackTrace();
-        return false;
+            writer.append("\r\n").flush();
+            writer.append("--").append(boundary).append("--\r\n");
+            writer.close();
+
+            return conn.getResponseCode() == 200;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
-}
 
+    // ==========================================
+    // CÁC HÀM QUẢN LÝ PHIÊN BẢN (MỚI THÊM)
+    // ==========================================
 
+    public static String getProductDetail(int id) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:3000/api/products/" + id))
+                    .header("Authorization", "Bearer " + AuthSession.token)
+                    .GET()
+                    .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.body();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static boolean addVariant(int productId, String group, String name, double additionalPrice, int stockQuantity) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            String json = """
+            {
+              "variant_group": "%s",
+              "variant_name": "%s",
+              "additional_price": %.2f,
+              "stock_quantity": %d
+            }
+            """.formatted(group, name, additionalPrice, stockQuantity);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:3000/api/products/" + productId + "/variants"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + adminlienketweb.AuthSession.token)
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200 || response.statusCode() == 201;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean deleteVariant(int variantId) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:3000/api/products/variants/" + variantId))
+                    .header("Authorization", "Bearer " + AuthSession.token)
+                    .DELETE()
+                    .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
