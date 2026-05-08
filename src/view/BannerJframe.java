@@ -196,11 +196,18 @@ public class BannerJframe extends JPanel{
 
     private void displayImage(String path, boolean isUrl) {
         try {
-            Image img = isUrl ? ImageIO.read(new URL(path)) : new ImageIcon(path).getImage();
+            if (lblPreview.getWidth() <= 0 || lblPreview.getHeight() <= 0) return;
+            Image img;
+            if (isUrl) {
+                img = new ImageIcon(new URL(path)).getImage();
+            } else {
+                img = new ImageIcon(path).getImage();
+            }
             Image scaled = img.getScaledInstance(lblPreview.getWidth(), lblPreview.getHeight(), Image.SCALE_SMOOTH);
             lblPreview.setIcon(new ImageIcon(scaled));
             lblPreview.setText("");
         } catch (Exception e) {
+            lblPreview.setIcon(null);
             lblPreview.setText("Lỗi load ảnh");
         }
     }
