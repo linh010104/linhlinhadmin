@@ -34,9 +34,6 @@ public class ProductJframe extends JPanel{
     public ProductJframe() {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
-        // ==========================================
-        // 1. THANH CÔNG CỤ TRÊN CÙNG
-        // ==========================================
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         topPanel.setBackground(Color.WHITE);
         
@@ -65,9 +62,6 @@ public class ProductJframe extends JPanel{
 
         add(topPanel, BorderLayout.NORTH);
 
-        // ==========================================
-        // 2. BẢNG NỬA TRÊN (MASTER: SẢN PHẨM CHÍNH)
-        // ==========================================
         model = new DefaultTableModel() {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -87,9 +81,7 @@ public class ProductJframe extends JPanel{
         JScrollPane masterScrollPane = new JScrollPane(table);
         masterScrollPane.getViewport().setBackground(Color.WHITE);
         masterScrollPane.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
-        // ==========================================
-        // 3. BẢNG NỬA DƯỚI (DETAIL: PHIÊN BẢN CỦA SP)
-        // ==========================================
+        
         JPanel detailPanel = new JPanel(new BorderLayout());
         detailPanel.setBackground(Color.WHITE);
         detailPanel.setBorder(BorderFactory.createTitledBorder("Chi tiết Phiên bản"));
@@ -344,12 +336,31 @@ public class ProductJframe extends JPanel{
 
     private void uploadImage() {
         int row = table.getSelectedRow();
-        if (row == -1) return;
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn 1 sản phẩm ở bảng trên để thêm ảnh!");
+            return;
+        }
+        
         int productId = (int) model.getValueAt(row, 0);
         JFileChooser chooser = new JFileChooser();
+        
+        // BẬT CHẾ ĐỘ CHỌN NHIỀU FILE CÙNG LÚC
+        chooser.setMultiSelectionEnabled(true);
+        
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            boolean ok = ProductApi.uploadImage(productId, chooser.getSelectedFile());
-            JOptionPane.showMessageDialog(this, ok ? "Upload ảnh thành công" : "Upload thất bại");
+            // Lấy danh sách các file đã chọn
+            File[] files = chooser.getSelectedFiles();
+            
+            if (files.length == 0) return;
+            
+            // Gọi hàm API mới (nhận mảng files)
+            boolean ok = ProductApi.uploadImages(productId, files);
+            
+            if (ok) {
+                JOptionPane.showMessageDialog(this, "Tuyệt vời! Đã upload thành công " + files.length + " ảnh.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Upload thất bại. Vui lòng check lại kết nối hoặc dung lượng ảnh!");
+            }
         }
     }
 

@@ -121,33 +121,42 @@ public class ProductApi {
         }
     }
 
-    public static boolean uploadImage(int productId, File file) {
+    public static boolean uploadImages(int productId, File[] files) {
         try {
             String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
-            URL url = new URL("http://localhost:3000/api/product-images/" + productId);
+            
+            // CHÚ Ý CHỖ NÀY: URL phải chính xác tuyệt đối như vầy
+            URL url = new URL("http://localhost:3000/api/products/" + productId + "/images");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
             conn.setDoOutput(true);
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            conn.setRequestProperty("Authorization", "Bearer " + AuthSession.token);
 
             OutputStream out = conn.getOutputStream();
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(out, "UTF-8"), true);
 
-            writer.append("--").append(boundary).append("\r\n");
-            writer.append("Content-Disposition: form-data; name=\"image\"; filename=\"")
-                  .append(file.getName()).append("\"\r\n");
-            writer.append("Content-Type: image/jpeg\r\n\r\n");
-            writer.flush();
+            for (File file : files) {
+                writer.append("--").append(boundary).append("\r\n");
+                // CHÚ Ý CHỖ NÀY: name phải là "images" (có s)
+                writer.append("Content-Disposition: form-data; name=\"images\"; filename=\"")
+                      .append(file.getName()).append("\"\r\n");
+                writer.append("Content-Type: image/jpeg\r\n\r\n");
+                writer.flush();
 
-            Files.copy(file.toPath(), out);
-            out.flush();
+                java.nio.file.Files.copy(file.toPath(), out);
+                out.flush();
 
-            writer.append("\r\n").flush();
+                writer.append("\r\n").flush();
+            }
+
             writer.append("--").append(boundary).append("--\r\n");
             writer.close();
 
-            return conn.getResponseCode() == 200;
+            int responseCode = conn.getResponseCode();
+            System.out.println("Upload Response Code: " + responseCode);
+            return responseCode == 200 || responseCode == 201;
         } catch (Exception e) {
             e.printStackTrace();
             return false;
