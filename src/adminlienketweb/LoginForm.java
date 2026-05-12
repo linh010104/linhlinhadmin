@@ -7,8 +7,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import khongphaigiaodien.AuthApi;
-import view.ProductJframe;
+import com.formdev.flatlaf.FlatLightLaf; 
 import view.menu;
+
 /**
  *
  * @author AlinV
@@ -22,8 +23,7 @@ public class LoginForm extends JFrame {
     JButton btncancel = new JButton("Hủy");
 
     public LoginForm() {
-        setTitle("Admin Login");
-        setTitle("Đăng nhập hệ thống");
+        setTitle("Đăng nhập hệ thống Admin");
         this.setSize(600, 400);
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -33,12 +33,13 @@ public class LoginForm extends JFrame {
 
         btnLogin.addActionListener(this::handleLogin);
     }
+    
     public void flowGUI() {
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         JLabel lblTitle = new JLabel("ĐĂNG NHẬP", JLabel.CENTER);
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 24)); // Chữ to hơn xíu cho đẹp
         lblTitle.setForeground(new Color(0, 102, 204));
         mainPanel.add(lblTitle, BorderLayout.NORTH);
 
@@ -63,8 +64,11 @@ public class LoginForm extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
         btnLogin.setBackground(new Color(0, 153, 76));
         btnLogin.setForeground(Color.WHITE);
+        btnLogin.setFont(new Font("Segoe UI", Font.BOLD, 14)); // Font chữ đẹp cho nút
+        
         btncancel.setBackground(new Color(204, 0, 0));
         btncancel.setForeground(Color.WHITE);
+        btncancel.setFont(new Font("Segoe UI", Font.BOLD, 14));
 
         buttonPanel.add(btnLogin);
         buttonPanel.add(btncancel);
@@ -76,53 +80,65 @@ public class LoginForm extends JFrame {
 
     private void handleLogin(ActionEvent e) {
         String username = txtUsername.getText();
-    String password = new String(txtPassword.getPassword());
+        String password = new String(txtPassword.getPassword());
 
-    String response = AuthApi.login(username, password);
+        String response = AuthApi.login(username, password);
 
-    if (response == null || !response.contains("token")) {
-        JOptionPane.showMessageDialog(this, "Sai tài khoản hoặc mật khẩu");
-        return;
+        if (response == null || !response.contains("token")) {
+            JOptionPane.showMessageDialog(this, "Sai tài khoản hoặc mật khẩu");
+            return;
+        }
+
+        // ===== PARSE TOKEN =====
+        try {
+            org.json.JSONObject obj = new org.json.JSONObject(response);
+            String token = obj.getString("token");
+
+            // LƯU TOKEN DÙNG CHUNG
+            AuthSession.token = token;
+
+            // Xóa thông báo đăng nhập thành công cho mượt (vào thẳng app)
+            this.dispose();
+
+            // MỞ FRAME QUẢN LÝ
+            new menu().setVisible(true);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Lỗi xử lý đăng nhập");
+        }
     }
 
-
-    // ===== PARSE TOKEN =====
-    try {
-        org.json.JSONObject obj = new org.json.JSONObject(response);
-        String token = obj.getString("token");
-
-        // LƯU TOKEN DÙNG CHUNG
-        AuthSession.token = token;
-
-        JOptionPane.showMessageDialog(this, "Đăng nhập thành công!");
-
-        // ĐÓNG LOGIN
-        this.dispose();
-
-        // MỞ FRAME QUẢN LÝ
-        new menu().setVisible(true);
-
-    } catch (Exception ex) {
-        ex.printStackTrace();
-        JOptionPane.showMessageDialog(this, "Lỗi xử lý đăng nhập");
+    private void cancel(){
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "Bạn có chắc chắn muốn thoát không?",
+            "Xác nhận thoát",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        );
+        if (confirm == JOptionPane.OK_OPTION) {
+            System.exit(0);
+        }
     }
-    }
-
+    
+    // ========================================================
+    // ĐÂY LÀ CHỖ KÍCH HOẠT FLATLAF CHO TOÀN BỘ APP
+    // ========================================================
     public static void main(String[] args) {
+        // Cài đặt giao diện FlatLightLaf trước khi khởi động Form
+        try {
+            UIManager.setLookAndFeel(new FlatLightLaf());
+            // Làm cho các nút bo tròn nhẹ đẹp hơn
+            UIManager.put("Button.arc", 10);
+            UIManager.put("Component.arc", 10);
+            UIManager.put("TextComponent.arc", 10);
+        } catch (Exception ex) {
+            System.err.println("Không thể khởi tạo FlatLaf");
+        }
+
         SwingUtilities.invokeLater(() -> {
             new LoginForm().setVisible(true);
         });
     }
-    private void cancel(){
-         int confirm = JOptionPane.showConfirmDialog(
-        this,
-        "Bạn có chắc chắn muốn thoát không?",
-        "Xác nhận thoát",
-        JOptionPane.OK_CANCEL_OPTION,
-        JOptionPane.QUESTION_MESSAGE
-    );
-    if (confirm == JOptionPane.OK_OPTION) {
-        System.exit(0);
-    }
-  }
 }
