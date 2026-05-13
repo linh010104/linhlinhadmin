@@ -138,6 +138,11 @@ public class OrderJFrame extends JPanel{
                 if (table.getSelectedRow() == -1) loadOrders();
             }
         }, 0, 5000);
+        
+    }
+    public OrderJFrame(String initialFilter) {
+        this(); // Gọi lại toàn bộ giao diện ở hàm mặc định
+        cbbFilter.setSelectedItem(initialFilter); // Tự động đổi combo box sang trạng thái truyền vào (vd: "NEW")
     }
 
     private void loadOrders() {

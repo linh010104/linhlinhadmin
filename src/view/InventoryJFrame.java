@@ -12,13 +12,11 @@ import java.awt.*;
 import khongphaigiaodien.InventoryApi;
 import org.json.JSONArray;
 import org.json.JSONObject;
-/**
- *
- * @author AlinV
- */
+
 public class InventoryJFrame extends JPanel{
     private JTable table;
     private DefaultTableModel model;
+    private boolean showLowStockOnly = false; // Biến cờ kiểm tra lọc
 
     public InventoryJFrame() {
         setLayout(new BorderLayout());
@@ -30,8 +28,8 @@ public class InventoryJFrame extends JPanel{
         topPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
 
         JButton btnImport = new JButton("Nhập Hàng Vào Kho");
-        styleButton(btnImport, new Color(0, 153, 76)); // Xanh lá cây
-        btnImport.addActionListener(e -> showImportChoiceDialog()); // CẬP NHẬT: Gọi menu chọn
+        styleButton(btnImport, new Color(0, 153, 76)); 
+        btnImport.addActionListener(e -> showImportChoiceDialog());
 
         JButton btnRefresh = new JButton("Làm mới");
         styleButton(btnRefresh, Color.GRAY);
@@ -52,13 +50,17 @@ public class InventoryJFrame extends JPanel{
         table = new JTable(model);
         styleTable(table);
 
-        // Tô đậm cột Số lượng tồn kho
         table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 c.setFont(c.getFont().deriveFont(Font.BOLD));
-                c.setForeground(new Color(0, 102, 204)); // Xanh đậm
+                
+                // Tô màu đỏ nếu tồn kho < 10
+                int qty = Integer.parseInt(value.toString());
+                if(qty < 10) c.setForeground(new Color(220, 53, 69)); 
+                else c.setForeground(new Color(0, 102, 204));
+                
                 return c;
             }
         });
@@ -71,6 +73,15 @@ public class InventoryJFrame extends JPanel{
         loadData();
     }
 
+    // === THÊM MỚI: HÀM KHỞI TẠO TỪ DASHBOARD ===
+    public InventoryJFrame(boolean showLowStockOnly) {
+        this(); 
+        this.showLowStockOnly = showLowStockOnly;
+        if (showLowStockOnly) {
+            loadData(); // Tải lại bảng với chế độ lọc
+        }
+    }
+
     private void loadData() {
         String json = InventoryApi.getAll();
         if (json == null) return;
@@ -80,101 +91,64 @@ public class InventoryJFrame extends JPanel{
         
         for (int i = 0; i < arr.length(); i++) {
             JSONObject o = arr.getJSONObject(i);
+            int qty = o.getInt("quantity");
             
-            // Xử lý cẩn thận null pointer nếu ngày tháng bị trống
+            // Nếu cờ lọc bật và số lượng >= 10 thì bỏ qua không vẽ lên bảng
+            if (showLowStockOnly && qty >= 10) continue; 
+            
             String date = o.optString("updated_at", "Chưa cập nhật");
             if(date.contains("T")) date = date.replace("T", " ").substring(0, 16);
             
-            model.addRow(new Object[]{
-                o.getInt("id"),
-                o.getString("name"),
-                o.optString("sku", "---"),
-                o.getInt("quantity"), // Lấy số lượng tồn kho mới
-                date
-            });
+            model.addRow(new Object[]{ o.getInt("id"), o.getString("name"), o.optString("sku", "---"), qty, date });
         }
     }
 
-    // --- MỚI: MENU HIỂN THỊ LỰA CHỌN ---
     private void showImportChoiceDialog() {
         Object[] options = {"Nhập Thủ Công", "Quét Hóa Đơn AI"};
-        int choice = JOptionPane.showOptionDialog(this,
-                "Bạn muốn nhập kho bằng phương thức nào?",
-                "Chọn phương thức nhập kho",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[1]); // Mặc định tô sáng nút AI
+        int choice = JOptionPane.showOptionDialog(this, "Bạn muốn nhập kho bằng phương thức nào?", "Chọn phương thức nhập kho", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
 
-        if (choice == 0) {
-            // Người dùng chọn nhập thủ công
-            showManualImportDialog();
-        } else if (choice == 1) {
-            // Người dùng chọn nhập bằng AI
+        if (choice == 0) showManualImportDialog();
+        else if (choice == 1) {
             JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
             ScanInvoiceDialog dialog = new ScanInvoiceDialog(parentFrame);
             dialog.setVisible(true);
-            
-            // TỰ ĐỘNG CẬP NHẬT LẠI BẢNG SAU KHI TẮT FORM AI
             loadData();
         }
     }
 
-    // --- GIỮ NGUYÊN LOGIC NHẬP THỦ CÔNG CŨ ---
     private void showManualImportDialog() {
         int row = table.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng click chọn 1 sản phẩm trên bảng để nhập thủ công!");
-            return;
-        }
+        if (row == -1) { JOptionPane.showMessageDialog(this, "Vui lòng click chọn 1 sản phẩm trên bảng!"); return; }
 
         String prodName = model.getValueAt(row, 1).toString();
         int prodId = (int) model.getValueAt(row, 0);
-
-        String input = JOptionPane.showInputDialog(this, "Nhập số lượng muốn thêm cho:\n" + prodName, "Nhập kho thủ công", JOptionPane.QUESTION_MESSAGE);
+        String input = JOptionPane.showInputDialog(this, "Nhập số lượng thêm cho:\n" + prodName, "Nhập kho thủ công", JOptionPane.QUESTION_MESSAGE);
         
         if (input != null && !input.isEmpty()) {
             try {
                 int amount = Integer.parseInt(input);
-                if (amount <= 0) {
-                    JOptionPane.showMessageDialog(this, "Số lượng phải lớn hơn 0!");
-                    return;
-                }
-
+                if (amount <= 0) { JOptionPane.showMessageDialog(this, "Số lượng phải lớn hơn 0!"); return; }
                 if (InventoryApi.importGoods(prodId, amount)) {
                     JOptionPane.showMessageDialog(this, "Nhập kho thành công!");
                     loadData();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Lỗi khi nhập kho!");
-                }
-
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, "Vui lòng nhập số nguyên!");
-            }
+                } else JOptionPane.showMessageDialog(this, "Lỗi khi nhập kho!");
+            } catch (NumberFormatException e) { JOptionPane.showMessageDialog(this, "Vui lòng nhập số nguyên!"); }
         }
     }
 
-    // --- STYLE HELPER ---
     private void styleButton(JButton btn, Color color) {
-        btn.setBackground(color);
-        btn.setForeground(Color.WHITE);
-        btn.setFocusPainted(false);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btn.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setBackground(color); btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false); btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15)); btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
     private void styleTable(JTable table) {
-        table.setRowHeight(35);
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.setGridColor(new Color(230, 230, 230));
-        table.setSelectionBackground(new Color(232, 242, 254));
+        table.setRowHeight(35); table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        table.setGridColor(new Color(230, 230, 230)); table.setSelectionBackground(new Color(232, 242, 254));
         table.setSelectionForeground(Color.BLACK);
         JTableHeader header = table.getTableHeader();
         header.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        header.setBackground(new Color(50, 50, 50));
-        header.setForeground(Color.WHITE);
+        header.setBackground(new Color(50, 50, 50)); header.setForeground(Color.WHITE);
         header.setPreferredSize(new Dimension(header.getWidth(), 40));
     }
 }
