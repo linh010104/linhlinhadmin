@@ -253,44 +253,101 @@ public class RevenueJFrame extends JPanel{
             return;
         }
 
+        // Bơm chi tiết bán hàng
         StringBuilder dataToAi = new StringBuilder();
         for(int i = 0; i < table.getRowCount(); i++) {
-            dataToAi.append(table.getValueAt(i, 1)).append(" (x").append(table.getValueAt(i, 3)).append("); ");
+            dataToAi.append("- ").append(table.getValueAt(i, 1))
+                    .append(" (Bán ra: ").append(table.getValueAt(i, 3))
+                    .append(", Lãi: ").append(table.getValueAt(i, 5)).append(")\n");
         }
 
-        JOptionPane.showMessageDialog(this, "AI đang phân tích hiệu quả kinh doanh của Linh... Vui lòng đợi!");
+        JDialog loadingDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "Vui lòng đợi", true);
+        loadingDialog.setLayout(new BorderLayout(10, 10));
+        loadingDialog.setSize(350, 120);
+        loadingDialog.setLocationRelativeTo(this);
+        // KHÓA NÚT X (Buộc phải đợi AI chạy xong)
+        loadingDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE); 
+        
+        JPanel pnlLoad = new JPanel(new BorderLayout(15, 15));
+        pnlLoad.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        pnlLoad.setBackground(Color.WHITE);
 
-        try {
-            java.net.URL url = new java.net.URL("http://localhost:3000/api/ai/analyze-finance");
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+        JLabel lblMsg = new JLabel("🤖 Giám đốc AI đang đọc báo cáo...", SwingConstants.CENTER);
+        lblMsg.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setIndeterminate(true); 
+        progressBar.setForeground(new Color(102, 0, 153)); // Màu tím tone-sur-tone với cái nút
+        progressBar.setBackground(new Color(240, 240, 240));
+        
+        pnlLoad.add(lblMsg, BorderLayout.NORTH);
+        pnlLoad.add(progressBar, BorderLayout.CENTER);
+        loadingDialog.add(pnlLoad);
 
-            JSONObject body = new JSONObject();
-            body.put("profit", lblProfit.getText());
-            body.put("details", dataToAi.toString());
+        // ==========================================
+        // MỞ LUỒNG NGẦM GỌI API (BACKGROUND THREAD)
+        // ==========================================
+        new Thread(() -> {
+            try {
+                java.net.URL url = new java.net.URL("http://localhost:3000/api/ai/analyze-finance");
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
 
-            try (java.io.OutputStream os = conn.getOutputStream()) {
-                os.write(body.toString().getBytes("utf-8"));
+                JSONObject body = new JSONObject();
+                body.put("totalRevenue", lblTotalMoney.getText());
+                body.put("totalImportCost", lblTotalCost.getText());
+                body.put("totalVatPaid", lblTotalVat.getText());
+                body.put("profit", lblProfit.getText());
+                body.put("soldData", dataToAi.toString());
+                body.put("importData", "Dữ liệu nhập đã tính gộp trong Vốn."); 
+
+                try (java.io.OutputStream os = conn.getOutputStream()) {
+                    os.write(body.toString().getBytes("utf-8"));
+                }
+
+                if (conn.getResponseCode() == 200) {
+                    java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), "utf-8"));
+                    StringBuilder res = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) res.append(line.trim());
+                    
+                    String rawAdvice = new JSONObject(res.toString()).getString("advice");
+                    
+                    // Dịch Markdown sang HTML
+                    String htmlAdvice = rawAdvice
+                            .replaceAll("\\*\\*(.*?)\\*\\*", "<b style='color:#00509E;'>$1</b>")
+                            .replaceAll("\\* (.*?)\n", "<li style='margin-bottom:8px;'>$1</li>")
+                            .replaceAll("\n", "<br>");
+
+                    String finalHtml = "<html><body style='font-family:Segoe UI; font-size:14px; padding:15px; color:#333333;'>" 
+                                     + htmlAdvice + "</body></html>";
+
+                    // Gọi lại luồng chính để hiển thị UI
+                    SwingUtilities.invokeLater(() -> {
+                        loadingDialog.dispose(); // BƯỚC QUAN TRỌNG: API CHẠY XONG TỰ TẮT FORM LOADING
+                        
+                        JEditorPane editorPane = new JEditorPane("text/html", finalHtml);
+                        editorPane.setEditable(false);
+                        editorPane.setBackground(new Color(245, 248, 250)); 
+                        
+                        JScrollPane pane = new JScrollPane(editorPane);
+                        pane.setPreferredSize(new Dimension(700, 450));
+                        pane.setBorder(BorderFactory.createEmptyBorder());
+                        
+                        JOptionPane.showMessageDialog(this, pane, "🤖 Giám Đốc AI Phân Tích Tài Chính", JOptionPane.INFORMATION_MESSAGE);
+                    });
+                }
+            } catch (Exception e) { 
+                SwingUtilities.invokeLater(() -> {
+                    loadingDialog.dispose(); // Lỗi cũng phải tắt form loading
+                    JOptionPane.showMessageDialog(this, "Lỗi kết nối AI: " + e.getMessage());
+                });
             }
-
-            if (conn.getResponseCode() == 200) {
-                java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), "utf-8"));
-                StringBuilder res = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null) res.append(line.trim());
-                
-                String advice = new JSONObject(res.toString()).getString("advice");
-                JTextArea area = new JTextArea(advice);
-                area.setLineWrap(true); area.setWrapStyleWord(true); area.setEditable(false);
-                JScrollPane pane = new JScrollPane(area);
-                pane.setPreferredSize(new Dimension(550, 350));
-                JOptionPane.showMessageDialog(this, pane, "🤖 Giám Đốc AI Tư Vấn", JOptionPane.INFORMATION_MESSAGE);
-            }
-        } catch (Exception e) { e.printStackTrace(); }
+        }).start();
+        loadingDialog.setVisible(true); 
     }
-
     // --- HELPER METHODS ---
     private String getTodayDate() {
         return new SimpleDateFormat("yyyy-MM-dd").format(new Date());
