@@ -112,7 +112,6 @@ public class OrderJFrame extends JPanel{
         scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         add(scrollPane, BorderLayout.CENTER);
 
-        // --- 3. FOOTER ---
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         bottomPanel.setBackground(Color.WHITE);
         lblStatus = new JLabel("Hệ thống sẵn sàng...");

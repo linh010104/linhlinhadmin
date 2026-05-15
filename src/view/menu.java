@@ -64,7 +64,7 @@ public class menu extends JFrame {
         headerContainer.setBackground(new Color(0, 102, 153));
         headerContainer.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
-        JLabel headerTitle = new JLabel("HỆ THỐNG QUẢN LÝ DÀNH CHO ADMIN", SwingConstants.CENTER);
+        JLabel headerTitle = new JLabel("HỆ THỐNG QUẢN LÝ ", SwingConstants.CENTER);
         headerTitle.setFont(new Font("Segoe UI", Font.BOLD, 26));
         headerTitle.setForeground(Color.WHITE);
         headerContainer.add(headerTitle, BorderLayout.CENTER);
@@ -81,7 +81,6 @@ public class menu extends JFrame {
         headerContainer.add(btnHomeIcon, BorderLayout.EAST);
         add(headerContainer, BorderLayout.NORTH);
 
-        // --- SIDEBAR MENU ---
         JPanel menuPanel = new JPanel(new GridLayout(0, 1, 10, 12));
         menuPanel.setBackground(new Color(240, 245, 250));
         menuPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));

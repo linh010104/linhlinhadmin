@@ -124,11 +124,6 @@ public class ProductJframe extends JPanel{
         splitPane.setDividerLocation(300);
         splitPane.setResizeWeight(0.6); 
         add(splitPane, BorderLayout.CENTER);
-        // ==========================================
-        // 5. CÁC SỰ KIỆN LOGIC MASTER-DETAIL
-        // ==========================================
-        
-        // Sự kiện: Khi click vào 1 dòng ở Bảng Trên -> Load data Bảng Dưới
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 int row = table.getSelectedRow();
