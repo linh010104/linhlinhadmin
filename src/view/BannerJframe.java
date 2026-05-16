@@ -50,19 +50,17 @@ public class BannerJframe extends JPanel{
     public BannerJframe() {
         setSize(1100, 700);
         initComponents();
-        loadTable(); // Tải bảng sau khi đã load xong Combobox
+        loadTable(); 
     }
 
     private void initComponents() {
         setLayout(new BorderLayout(20, 20));
 
-        // --- 1. Tiêu đề Trang ---
         JLabel lblHeader = new JLabel("QUẢN LÝ BANNER QUẢNG CÁO");
         lblHeader.setFont(new Font("Segoe UI", Font.BOLD, 24));
         lblHeader.setForeground(new Color(44, 62, 80));
         add(lblHeader, BorderLayout.NORTH);
 
-        // --- 2. Panel bên trái: Nhập liệu & Preview ---
         JPanel pnlLeft = new JPanel();
         pnlLeft.setLayout(new BoxLayout(pnlLeft, BoxLayout.Y_AXIS));
         pnlLeft.setBackground(Color.WHITE);
@@ -71,7 +69,6 @@ public class BannerJframe extends JPanel{
             new EmptyBorder(15, 15, 15, 15)));
         pnlLeft.setPreferredSize(new Dimension(350, 0));
 
-        // Preview Area
         lblPreview = new JLabel("Chưa chọn ảnh/Preview", SwingConstants.CENTER);
         lblPreview.setBorder(new LineBorder(new Color(230, 230, 230), 2));
         lblPreview.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -81,11 +78,9 @@ public class BannerJframe extends JPanel{
         JButton btnChoose = createStyledButton("Chọn ảnh từ máy", new Color(52, 152, 219));
         btnChoose.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Form Fields
         txtTitle = createStyledTextField();
         txtLink = createStyledTextField();
         
-        // Khởi tạo Combobox và nạp dữ liệu động vào
         cboType = new JComboBox<>();
         cboType.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         loadComboTypes(); 
@@ -106,7 +101,6 @@ public class BannerJframe extends JPanel{
         pnlLeft.add(cboType);
         pnlLeft.add(Box.createVerticalGlue());
 
-        // Nút hành động
         JPanel pnlActions = new JPanel(new GridLayout(2, 2, 10, 10));
         pnlActions.setBackground(Color.WHITE);
         JButton btnAdd = createStyledButton("THÊM MỚI", new Color(46, 204, 113));
@@ -132,11 +126,9 @@ public class BannerJframe extends JPanel{
         JScrollPane scrollPane = new JScrollPane(tblBanner);
         scrollPane.setBorder(new LineBorder(new Color(200, 200, 200)));
 
-        // Gộp vào Layout chính
         add(pnlLeft, BorderLayout.WEST);
         add(scrollPane, BorderLayout.CENTER);
 
-        // --- EVENT HANDLING ---
         btnChoose.addActionListener(e -> {
             JFileChooser fc = new JFileChooser();
             FileNameExtensionFilter filter = new FileNameExtensionFilter("Hình ảnh", "jpg", "png", "jpeg", "gif");
@@ -154,11 +146,9 @@ public class BannerJframe extends JPanel{
                 return;
             }
             
-            // Lấy chữ trên Combobox và dò ra mã ngầm định (Ví dụ: "Banner Dọc - Laptop" -> "VERTICAL_CATEGORY_1")
             String selectedDisplay = cboType.getSelectedItem().toString();
             String dbBannerType = bannerTypeMap.get(selectedDisplay);
             
-            // Lấy tiêu đề, nếu để trống thì lấy luôn chữ của Combobox làm tiêu đề cho đỡ trống Database
             String title = txtTitle.getText().isEmpty() ? selectedDisplay : txtTitle.getText();
 
             if (BannerApi.uploadBanner(selectedImageFile, title, txtLink.getText(), dbBannerType)) {
@@ -202,14 +192,10 @@ public class BannerJframe extends JPanel{
         });
     }
 
-    // ==========================================================
-    // HÀM MỚI: TẢI DANH MỤC TỪ API VÀ ĐỔ VÀO COMBOBOX & HASHMAP
-    // ==========================================================
     private void loadComboTypes() {
         cboType.removeAllItems();
         bannerTypeMap.clear();
 
-        // 1. Thêm 2 banner tĩnh gốc
         String textBig = "Slider Lớn (Trang chủ)";
         cboType.addItem(textBig);
         bannerTypeMap.put(textBig, "BIG_SLIDER");
@@ -218,7 +204,6 @@ public class BannerJframe extends JPanel{
         cboType.addItem(textSub);
         bannerTypeMap.put(textSub, "SUB_BANNER");
 
-        // 2. Gọi API lấy danh mục để làm Banner Dọc tự động
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder()

@@ -97,7 +97,6 @@ public class RevenueJFrame extends JPanel{
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
             
-            // Định nghĩa kiểu dữ liệu để Sắp xếp (Sorting) chính xác
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 if (columnIndex == 0 || columnIndex == 3) return Integer.class;
@@ -109,7 +108,6 @@ public class RevenueJFrame extends JPanel{
         table.setRowHeight(35);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         
-        // --- TÍNH NĂNG MỚI: TỰ ĐỘNG SẮP XẾP KHI CLICK VÀO TIÊU ĐỀ CỘT ---
         table.setAutoCreateRowSorter(true);
 
         TableColumnModel cm = table.getColumnModel();
@@ -284,9 +282,6 @@ public class RevenueJFrame extends JPanel{
         pnlLoad.add(progressBar, BorderLayout.CENTER);
         loadingDialog.add(pnlLoad);
 
-        // ==========================================
-        // MỞ LUỒNG NGẦM GỌI API (BACKGROUND THREAD)
-        // ==========================================
         new Thread(() -> {
             try {
                 java.net.URL url = new java.net.URL("http://localhost:3000/api/ai/analyze-finance");
@@ -324,9 +319,8 @@ public class RevenueJFrame extends JPanel{
                     String finalHtml = "<html><body style='font-family:Segoe UI; font-size:14px; padding:15px; color:#333333;'>" 
                                      + htmlAdvice + "</body></html>";
 
-                    // Gọi lại luồng chính để hiển thị UI
                     SwingUtilities.invokeLater(() -> {
-                        loadingDialog.dispose(); // BƯỚC QUAN TRỌNG: API CHẠY XONG TỰ TẮT FORM LOADING
+                        loadingDialog.dispose();
                         
                         JEditorPane editorPane = new JEditorPane("text/html", finalHtml);
                         editorPane.setEditable(false);
@@ -348,7 +342,6 @@ public class RevenueJFrame extends JPanel{
         }).start();
         loadingDialog.setVisible(true); 
     }
-    // --- HELPER METHODS ---
     private String getTodayDate() {
         return new SimpleDateFormat("yyyy-MM-dd").format(new Date());
     }
