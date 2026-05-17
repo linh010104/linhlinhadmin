@@ -43,13 +43,11 @@ public class menu extends JFrame {
     private JLabel lblNewOrdersValue;
     private JLabel lblLowStockValue;
     
-    // Biến lưu data động cho Biểu đồ
     private int[] chartData = {0, 0, 0, 0, 0, 0, 0};
     private String[] chartLabels = {"", "", "", "", "", "", ""};
     private int maxChartValue = 100; // Mức trần để scale cột
     private JPanel chartView; // Panel vẽ biểu đồ
     
-    // Biến lưu data động cho Bảng đơn hàng
     private DefaultTableModel recentOrdersModel;
     
     public menu() {
@@ -59,7 +57,6 @@ public class menu extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // --- HEADER ---
         JPanel headerContainer = new JPanel(new BorderLayout());
         headerContainer.setBackground(new Color(0, 102, 153));
         headerContainer.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
@@ -106,14 +103,12 @@ public class menu extends JFrame {
         menuPanel.add(btnLogout);
         add(menuPanel, BorderLayout.WEST);
 
-        // --- CONTENT AREA ---
         contentPanel = new JPanel(new BorderLayout());
         contentPanel.setBackground(new Color(248, 249, 250));
         add(contentPanel, BorderLayout.CENTER);
 
         showPanel(createDashboardPanel());
 
-        // --- EVENTS ---
         btnCategory.addActionListener(e -> showPanel(new CategoryBrandJframe()));
         btnProduct.addActionListener(e -> showPanel(new ProductJframe()));
         btnTable.addActionListener(e -> showPanel(new OrderJFrame()));

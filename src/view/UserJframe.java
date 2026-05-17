@@ -25,7 +25,6 @@ public class UserJframe extends JPanel{
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
-        // --- HEADER ---
         JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         top.setBackground(Color.WHITE);
 
@@ -37,7 +36,6 @@ public class UserJframe extends JPanel{
 
         add(top, BorderLayout.NORTH);
 
-        // --- BODY ---
         model = new DefaultTableModel(new String[]{ "ID", "Username", "Họ tên", "Email", "SĐT", "Quyền", "Trạng thái" }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -60,7 +58,6 @@ public class UserJframe extends JPanel{
         loadUsers();
     }
 
-    // --- LOGIC GIỮ NGUYÊN ---
     private void loadUsers() {
         model.setRowCount(0);
         List<UserDTO> list = UserApi.getAll();

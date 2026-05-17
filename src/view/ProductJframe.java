@@ -22,10 +22,10 @@ import org.json.JSONObject;
  * @author AlinV
  */
 public class ProductJframe extends JPanel{
-    private JTable table; // Bảng Master (Sản phẩm chính)
+    private JTable table; 
     private DefaultTableModel model;
     
-    private JTable varTable; // Bảng Detail (Phiên bản)
+    private JTable varTable; 
     private DefaultTableModel varModel;
     
     private JLabel lblVariantTitle;

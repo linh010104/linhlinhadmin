@@ -41,7 +41,6 @@ public class RevenueJFrame extends JPanel{
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
-        // --- 1. HEADER (BỘ LỌC) ---
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         topPanel.setBackground(Color.WHITE);
 
@@ -50,13 +49,11 @@ public class RevenueJFrame extends JPanel{
         topPanel.add(createInputPanel("Từ ngày:", txtFromDate = new JTextField(today, 10)));
         topPanel.add(createInputPanel("Đến ngày:", txtToDate = new JTextField(today, 10)));
 
-        // Nút Xem Thống Kê
         JButton btnView = new JButton("Xem Thống Kê");
         styleButton(btnView, new Color(0, 102, 204));
         btnView.addActionListener(e -> loadData());
         topPanel.add(btnView);
 
-        // NÚT LỌC NHANH 7 NGÀY
         JButton btn7Days = new JButton("7 Ngày Qua");
         styleButton(btn7Days, Color.GRAY);
         btn7Days.addActionListener(e -> {
@@ -66,7 +63,6 @@ public class RevenueJFrame extends JPanel{
         });
         topPanel.add(btn7Days);
 
-        // NÚT LỌC NHANH 30 NGÀY
         JButton btn30Days = new JButton("30 Ngày Qua");
         styleButton(btn30Days, Color.GRAY);
         btn30Days.addActionListener(e -> {
@@ -90,7 +86,6 @@ public class RevenueJFrame extends JPanel{
 
         add(topPanel, BorderLayout.NORTH);
 
-        // --- 2. BẢNG DỮ LIỆU (THEO SẢN PHẨM) ---
         model = new DefaultTableModel(new String[]{
             "ID", "Tên Sản Phẩm", "Mẫu mã/Thông số", "SL Bán", "Doanh Thu", "Lợi Nhuận", "Loại Hàng", "Thương Hiệu"
         }, 0) {

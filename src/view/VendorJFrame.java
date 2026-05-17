@@ -61,7 +61,6 @@ public class VendorJFrame extends JPanel{
             JOptionPane.showMessageDialog(this, "Vui lòng chọn một nhà cung cấp để sửa!");
             return;
         }
-        // Lấy dữ liệu từ dòng đang chọn
         JSONObject vendor = new JSONObject();
         vendor.put("id", model.getValueAt(row, 0));
         vendor.put("name", model.getValueAt(row, 1));
