@@ -14,7 +14,7 @@ import org.json.JSONObject;
  * @author AlinV
  */
 public class VendorApi {
-    private static final String BASE_URL = "http://localhost:3000/api/vendors";
+    private static final String BASE_URL = "https://linhlinhstore.onrender.com/api/vendors";
 
     // Lấy toàn bộ danh sách NCC
     public static JSONArray getAll() {

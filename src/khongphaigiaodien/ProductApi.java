@@ -24,7 +24,7 @@ public class ProductApi {
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/products"))
+                    .uri(URI.create("https://linhlinhstore.onrender.com/api/products"))
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .GET()
                     .build();
@@ -59,7 +59,7 @@ public class ProductApi {
             """.formatted(name, sku, price, importPrice, stockQuantity, warranty, categoryId, description, specifications, brandId, status);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/products"))
+                    .uri(URI.create("https://linhlinhstore.onrender.com/api/products"))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + adminlienketweb.AuthSession.token)
                     .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -95,7 +95,7 @@ public class ProductApi {
             """.formatted(name, sku, price, importPrice, stockQuantity, warranty, categoryId, description, specifications, brandId, status);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/products/" + id))
+                    .uri(URI.create("https://linhlinhstore.onrender.com/api/products/" + id))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + adminlienketweb.AuthSession.token)
                     .PUT(HttpRequest.BodyPublishers.ofString(json))
@@ -109,7 +109,7 @@ public class ProductApi {
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/products/" + id))
+                    .uri(URI.create("https://linhlinhstore.onrender.com/api/products/" + id))
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .DELETE()
                     .build();
@@ -126,7 +126,7 @@ public class ProductApi {
             String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
             
             // CHÚ Ý CHỖ NÀY: URL phải chính xác tuyệt đối như vầy
-            URL url = new URL("http://localhost:3000/api/products/" + productId + "/images");
+            URL url = new URL("https://linhlinhstore.onrender.com/api/products/" + productId + "/images");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
             conn.setDoOutput(true);
@@ -171,7 +171,7 @@ public class ProductApi {
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/products/" + id))
+                    .uri(URI.create("https://linhlinhstore.onrender.com/api/products/" + id))
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .GET()
                     .build();
@@ -196,7 +196,7 @@ public class ProductApi {
             """.formatted(group, name, additionalPrice, stockQuantity);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/products/" + productId + "/variants"))
+                    .uri(URI.create("https://linhlinhstore.onrender.com/api/products/" + productId + "/variants"))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + adminlienketweb.AuthSession.token)
                     .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -214,7 +214,7 @@ public class ProductApi {
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/products/variants/" + variantId))
+                    .uri(URI.create("https://linhlinhstore.onrender.com/api/products/variants/" + variantId))
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .DELETE()
                     .build();

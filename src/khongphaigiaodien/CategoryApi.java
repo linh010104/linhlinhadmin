@@ -20,7 +20,7 @@ import org.json.JSONObject;
  * @author AlinV
  */
 public class CategoryApi {
-    private static final String BASE_URL = "http://localhost:3000/api/categories";
+    private static final String BASE_URL = "https://linhlinhstore.onrender.com/api/categories";
 
     // --- HÀM QUAN TRỌNG: Để file ProductJframe.java hết báo lỗi ---
     public static List<CategoryDTO> getAllCategories() {

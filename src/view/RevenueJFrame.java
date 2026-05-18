@@ -279,7 +279,7 @@ public class RevenueJFrame extends JPanel{
 
         new Thread(() -> {
             try {
-                java.net.URL url = new java.net.URL("http://localhost:3000/api/ai/analyze-finance");
+                java.net.URL url = new java.net.URL("https://linhlinhstore.onrender.com/api/ai/analyze-finance");
                 java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
@@ -325,7 +325,7 @@ public class RevenueJFrame extends JPanel{
                         pane.setPreferredSize(new Dimension(700, 450));
                         pane.setBorder(BorderFactory.createEmptyBorder());
                         
-                        JOptionPane.showMessageDialog(this, pane, "🤖 Giám Đốc AI Phân Tích Tài Chính", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(this, pane, "Đang Phân Tích Tài Chính", JOptionPane.INFORMATION_MESSAGE);
                     });
                 }
             } catch (Exception e) { 

@@ -22,7 +22,7 @@ import org.json.JSONObject;
  * @author AlinV
  */
 public class BannerApi {
-    private static final String BASE_URL = "http://localhost:3000/api/banners";
+    private static final String BASE_URL = "https://linhlinhstore.onrender.com/api/banners";
 
     // 1. LẤY DANH SÁCH BANNER (Dùng HttpClient & org.json)
     public static List<BannerDTO> getBanners(String type) {

@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 public class InventoryApi {
     public static String getAll() {
         try {
-            URL url = new URL("http://localhost:3000/api/inventory");
+            URL url = new URL("https://linhlinhstore.onrender.com/api/inventory");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             
@@ -37,7 +37,7 @@ public class InventoryApi {
     // Nhập hàng
     public static boolean importGoods(int productId, int amount) {
         try {
-            URL url = new URL("http://localhost:3000/api/inventory/import");
+            URL url = new URL("https://linhlinhstore.onrender.com/api/inventory/import");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");

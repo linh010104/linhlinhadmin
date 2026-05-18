@@ -14,7 +14,7 @@ import org.json.*;
  * @author AlinV
  */
 public class UserApi {
-    private static final String BASE_URL = "http://localhost:3000/api/users";
+    private static final String BASE_URL = "https://linhlinhstore.onrender.com/api/users";
 
     public static List<UserDTO> getAll() {
         List<UserDTO> list = new ArrayList<>();

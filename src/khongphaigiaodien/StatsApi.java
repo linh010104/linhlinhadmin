@@ -18,7 +18,7 @@ public class StatsApi {
     public static JSONObject getRevenue(String startDate, String endDate) {
         try {
             // URL API (Lưu ý: startDate và endDate phải có định dạng yyyy-mm-dd)
-            String urlString = "http://localhost:3000/api/stats/revenue?startDate=" + startDate + "&endDate=" + endDate;
+            String urlString = "https://linhlinhstore.onrender.com/api/stats/revenue?startDate=" + startDate + "&endDate=" + endDate;
             URL url = new URL(urlString);
             
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
