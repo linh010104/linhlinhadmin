@@ -23,7 +23,7 @@ public class OrderApi {
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("https://linhlinhstore.onrender.com/api/orders/admin/all")) // Gọi đúng API của admin
+                    .uri(URI.create(ApiConfig.BASE_URL + "/orders/admin/all")) // Gọi đúng API của admin
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .GET()
                     .build();
@@ -58,7 +58,7 @@ public class OrderApi {
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("https://linhlinhstore.onrender.com/api/orders/" + orderId + "/admin-status"))
+                    .uri(URI.create(ApiConfig.BASE_URL + "/orders/" + orderId + "/admin-status"))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .PUT(HttpRequest.BodyPublishers.ofString(json))
@@ -81,7 +81,7 @@ public class OrderApi {
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("https://linhlinhstore.onrender.com/api/orders/" + orderId + "/process-return"))
+                    .uri(URI.create(ApiConfig.BASE_URL + "/orders/" + orderId + "/process-return"))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .PUT(HttpRequest.BodyPublishers.ofString(body.toString()))
@@ -99,7 +99,7 @@ public class OrderApi {
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("https://linhlinhstore.onrender.com/api/orders/" + orderId))
+                    .uri(URI.create(ApiConfig.BASE_URL + "/orders/" + orderId))
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .GET()
                     .build();

@@ -27,7 +27,7 @@ public class AuthApi {
 
             // Đã đổi URL thành /api/auth/login (xóa chữ -admin)
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://linhlinhstore.onrender.com/api/auth/login"))
+                    .uri(URI.create(ApiConfig.BASE_URL + "/auth/login"))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json))
                     .build();

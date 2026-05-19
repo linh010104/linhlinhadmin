@@ -298,7 +298,7 @@ public class menu extends JFrame {
     private void fetchDashboardData() {
         new Thread(() -> {
             try {
-                URL url = new URL("https://linhlinhstore.onrender.com/api/stats/dashboard");
+                URL url = new URL(khongphaigiaodien.ApiConfig.BASE_URL + "/stats/dashboard");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
 

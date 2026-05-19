@@ -14,7 +14,7 @@ import org.json.JSONObject;
  * @author AlinV
  */
 public class BrandApi {
-    private static final String BASE_URL = "https://linhlinhstore.onrender.com/api/brands";
+    private static final String BASE_URL = ApiConfig.BASE_URL +"/brands";
 
     public static String getAllRaw() {
         try {
