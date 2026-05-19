@@ -32,7 +32,7 @@ import javax.swing.table.JTableHeader;
  * @author AlinV
  */
 public class BannerJframe extends JPanel{
-   private JTextField txtTitle, txtLink;
+  private JTextField txtTitle, txtLink;
     private JComboBox<String> cboType;
     private JLabel lblPreview;
     private JTable tblBanner;
@@ -45,7 +45,6 @@ public class BannerJframe extends JPanel{
     // Màu sắc chủ đạo theo giao diện của ông
     private final Color MAIN_COLOR = new Color(41, 128, 185); // Xanh dương
     private final Color BACKGROUND_COLOR = new Color(245, 246, 250);
-    private final String IMAGE_BASE_URL = "http://localhost:3000";
 
     public BannerJframe() {
         setSize(1100, 700);
@@ -182,7 +181,9 @@ public class BannerJframe extends JPanel{
         tblBanner.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && tblBanner.getSelectedRow() != -1) {
                 String path = tableModel.getValueAt(tblBanner.getSelectedRow(), 3).toString();
-                displayImage(IMAGE_BASE_URL + path, true);
+                // Đổi động DomainUrl theo cấu hình ApiConfig
+                String domainUrl = khongphaigiaodien.ApiConfig.BASE_URL.replace("/api", "");
+                displayImage(domainUrl + path, true);
             }
         });
         
@@ -206,8 +207,9 @@ public class BannerJframe extends JPanel{
 
         try {
             HttpClient client = HttpClient.newHttpClient();
+            // Gọi động qua ApiConfig thay vì IMAGE_BASE_URL cũ
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(IMAGE_BASE_URL + "/api/categories"))
+                    .uri(URI.create(khongphaigiaodien.ApiConfig.BASE_URL + "/categories"))
                     .GET()
                     .build();
             HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString());
@@ -253,9 +255,6 @@ public class BannerJframe extends JPanel{
         return tf;
     }
 
-    // ==========================================================
-    // HÀM SỬA LẠI: DUYỆT QUA HASHMAP ĐỂ TẢI HẾT TẤT CẢ CÁC LOẠI BANNER
-    // ==========================================================
     private void loadTable() {
         tableModel.setRowCount(0);
         
