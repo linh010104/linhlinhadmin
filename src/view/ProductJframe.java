@@ -6,12 +6,15 @@ package view;
 
 import api.CategoryDTO;
 import java.util.List;
-import java.util.ArrayList; 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
+import java.net.URL;
+import javax.imageio.ImageIO;
 import khongphaigiaodien.CategoryApi;
 import khongphaigiaodien.ProductApi;
 import org.json.JSONArray;
@@ -24,125 +27,57 @@ import org.json.JSONObject;
 public class ProductJframe extends JPanel{
     private JTable table; 
     private DefaultTableModel model;
-    
-    private JTable varTable; 
-    private DefaultTableModel varModel;
-    
-    private JLabel lblVariantTitle;
-    private int currentSelectedProductId = -1; // Lưu ID sản phẩm đang chọn
 
     public ProductJframe() {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
+        
+        // --- THANH CÔNG CỤ TRÊN CÙNG ---
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         topPanel.setBackground(Color.WHITE);
         
-        JButton btnAdd = new JButton("Thêm SP mới");
+        JButton btnAdd = new JButton("+ Thêm SP mới");
         styleButton(btnAdd, new Color(0, 153, 76));
-
-        JButton btnEdit = new JButton("Sửa SP");
-        styleButton(btnEdit, new Color(255, 153, 51));
-
-        JButton btnDelete = new JButton("Xóa SP");
-        styleButton(btnDelete, new Color(220, 53, 69));
-
-        JButton btnUploadImage = new JButton("Thêm ảnh");
-        styleButton(btnUploadImage, new Color(102, 51, 153));
-
         btnAdd.addActionListener(e -> showAddDialog());
-        btnEdit.addActionListener(e -> showEditDialog());
-        btnDelete.addActionListener(e -> deleteSelected());
-        btnUploadImage.addActionListener(e -> uploadImage());
-
         topPanel.add(btnAdd);
-        topPanel.add(btnEdit);
-        topPanel.add(btnDelete);
-        topPanel.add(Box.createHorizontalStrut(20));
-        topPanel.add(btnUploadImage);
 
         add(topPanel, BorderLayout.NORTH);
 
+        // --- BẢNG SẢN PHẨM RÚT GỌN ---
         model = new DefaultTableModel() {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
-        
+        // Thêm cột Hành động vào cuối
         model.setColumnIdentifiers(new String[]{ 
-            "ID", "Tên", "SKU", "Giá bán", "Giá nhập", "Tổng Tồn Kho", "Bảo hành", "Thông số", "Ghi chú", "Trạng thái", "CatID" 
+            "ID", "Tên Sản Phẩm", "SKU", "Giá Bán", "Tồn Kho", "Trạng Thái", "HÀNH ĐỘNG" 
         });
 
         table = new JTable(model);
         styleTable(table);
         
-        table.getColumnModel().getColumn(10).setMinWidth(0);
-        table.getColumnModel().getColumn(10).setMaxWidth(0);
-        table.getColumnModel().getColumn(10).setPreferredWidth(0);
+        // Xử lý sự kiện click vào cột "HÀNH ĐỘNG"
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                int col = table.columnAtPoint(e.getPoint());
+                // Cột Hành động là cột số 6 (Index = 6)
+                if (col == 6 && row >= 0) {
+                    int productId = (int) model.getValueAt(row, 0);
+                    showProductDetailDialog(productId);
+                }
+            }
+        });
 
         JScrollPane masterScrollPane = new JScrollPane(table);
         masterScrollPane.getViewport().setBackground(Color.WHITE);
         masterScrollPane.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+        add(masterScrollPane, BorderLayout.CENTER);
         
-        JPanel detailPanel = new JPanel(new BorderLayout());
-        detailPanel.setBackground(Color.WHITE);
-        detailPanel.setBorder(BorderFactory.createTitledBorder("Chi tiết Phiên bản"));
-
-        // Thanh công cụ của bảng Phiên bản
-        JPanel variantToolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
-        variantToolbar.setBackground(Color.WHITE);
-        
-        lblVariantTitle = new JLabel("Vui lòng chọn 1 sản phẩm ở trên để xem phiên bản");
-        lblVariantTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lblVariantTitle.setForeground(new Color(0, 102, 204));
-        
-        JButton btnAddVar = new JButton("+ Thêm Phiên Bản");
-        styleButton(btnAddVar, new Color(0, 102, 204));
-        
-        JButton btnDelVar = new JButton("- Xóa Phiên Bản");
-        styleButton(btnDelVar, new Color(220, 53, 69));
-
-        variantToolbar.add(lblVariantTitle);
-        variantToolbar.add(Box.createHorizontalStrut(20));
-        variantToolbar.add(btnAddVar);
-        variantToolbar.add(btnDelVar);
-        detailPanel.add(variantToolbar, BorderLayout.NORTH);
-
-        // Bảng dữ liệu Phiên bản
-        varModel = new DefaultTableModel(new String[]{"ID", "Nhóm (Màu/Dung lượng)", "Tên Phiên Bản", "Giá cộng thêm", "Tồn kho"}, 0){
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
-        };
-        varTable = new JTable(varModel);
-        styleTable(varTable);
-        JScrollPane detailScrollPane = new JScrollPane(varTable);
-        detailScrollPane.getViewport().setBackground(Color.WHITE);
-        detailPanel.add(detailScrollPane, BorderLayout.CENTER);
-
-        // ==========================================
-        // 4. CHIA ĐÔI MÀN HÌNH (JSPLITPANE)
-        // ==========================================
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, masterScrollPane, detailPanel);
-        splitPane.setDividerLocation(300);
-        splitPane.setResizeWeight(0.6); 
-        add(splitPane, BorderLayout.CENTER);
-        table.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                int row = table.getSelectedRow();
-                if (row != -1) {
-                    currentSelectedProductId = (int) model.getValueAt(row, 0);
-                    String pName = model.getValueAt(row, 1).toString();
-                    lblVariantTitle.setText("Đang xem phiên bản của: " + pName);
-                    loadVariants(currentSelectedProductId);
-                } else {
-                    currentSelectedProductId = -1;
-                    lblVariantTitle.setText("Vui lòng chọn 1 sản phẩm ở trên để xem phiên bản");
-                    varModel.setRowCount(0);
-                }
-            }
-        });
-        btnAddVar.addActionListener(e -> showAddVariantDialog());
-        btnDelVar.addActionListener(e -> deleteSelectedVariant());
         loadProducts();
     }
+
     private void loadProducts() {
         String json = ProductApi.getAllProducts();
         if (json == null || json.length() < 5) return;
@@ -155,134 +90,11 @@ public class ProductJframe extends JPanel{
                 p.getInt("id"), 
                 p.optString("name"), 
                 p.optString("sku"), 
-                p.optDouble("price", 0), 
-                p.optDouble("import_price", 0), 
-                p.optInt("stock_quantity", 0), // LƯU Ý: Ở CSDL cái này nên là tự cộng tổng
-                p.optInt("warranty_month", 0), 
-                p.optString("specifications", ""), 
-                p.optString("description", ""), 
+                String.format("%,.0f đ", p.optDouble("price", 0)), 
+                p.optInt("stock_quantity", 0),
                 p.optInt("status") == 1 ? "Đang bán" : "Ẩn",
-                p.optInt("category_id", -1) 
+                "✏️ Chi tiết / Sửa" // Chữ hiển thị ở cột Hành động
             });
-        }
-        varModel.setRowCount(0); // Clear bảng dưới khi reload bảng trên
-    }
-
-    private void loadVariants(int productId) {
-        varModel.setRowCount(0);
-        String jsonDetail = ProductApi.getProductDetail(productId);
-        if(jsonDetail != null) {
-            try {
-                JSONObject obj = new JSONObject(jsonDetail);
-                if(obj.has("variants")) {
-                    JSONArray vars = obj.getJSONArray("variants");
-                    for(int i=0; i<vars.length(); i++) {
-                        JSONObject v = vars.getJSONObject(i);
-                        varModel.addRow(new Object[]{
-                            v.getInt("id"), v.optString("variant_group"), v.optString("variant_name"),
-                            v.optDouble("additional_price", 0), v.optInt("stock_quantity", 0)
-                        });
-                    }
-                }
-            } catch(Exception ex) { ex.printStackTrace(); }
-        }
-    }
-
-    private void showAddVariantDialog() {
-        if (currentSelectedProductId == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn 1 sản phẩm ở bảng trên trước khi thêm phiên bản!");
-            return;
-        }
-
-        JComboBox<String> cbGroup = new JComboBox<>(new String[]{"Màu sắc", "Dung lượng", "Loại Switch", "Kích thước"});
-        JTextField txtName = new JTextField();
-        JTextField txtPrice = new JTextField("0");
-        JTextField txtStock = new JTextField("0");
-
-        Object[] form = {
-            "Nhóm phân loại:", cbGroup,
-            "Tên phiên bản (VD: Đỏ, 256GB):", txtName,
-            "Giá cộng thêm (VNĐ):", txtPrice,
-            "Số lượng nhập kho:", txtStock
-        };
-
-        if (JOptionPane.showConfirmDialog(this, form, "Thêm Phiên Bản Mới", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
-            if(txtName.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Tên phiên bản không được để trống!"); 
-                return;
-            }
-            boolean ok = ProductApi.addVariant(currentSelectedProductId, cbGroup.getSelectedItem().toString(), txtName.getText(), 
-                                               Double.parseDouble(txtPrice.getText()), Integer.parseInt(txtStock.getText()));
-            if(ok) {
-                loadVariants(currentSelectedProductId); // Tự động load lại bảng dưới
-                JOptionPane.showMessageDialog(this, "Thêm thành công!");
-            } else {
-                JOptionPane.showMessageDialog(this, "Thêm thất bại!");
-            }
-        }
-    }
-
-    private void deleteSelectedVariant() {
-        int vRow = varTable.getSelectedRow();
-        if(vRow == -1) { 
-            JOptionPane.showMessageDialog(this, "Hãy chọn 1 dòng ở bảng Phiên bản bên dưới để xóa!"); 
-            return; 
-        }
-        int varId = (int) varModel.getValueAt(vRow, 0);
-        if(JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa phiên bản này?") == JOptionPane.YES_OPTION) {
-            if(ProductApi.deleteVariant(varId)) {
-                loadVariants(currentSelectedProductId);
-            }
-        }
-    }
-
-    // Các hàm Add, Edit, Delete SP chính giữ nguyên logic
-    private void showEditDialog() {
-        int row = table.getSelectedRow();
-        if (row == -1) { JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm để sửa!"); return; }
-        
-        int id = (int) model.getValueAt(row, 0);
-        
-        JTextField txtName = new JTextField(model.getValueAt(row, 1).toString());
-        JTextField txtSku = new JTextField(model.getValueAt(row, 2).toString());
-        JTextField txtPrice = new JTextField(model.getValueAt(row, 3).toString());
-        JTextField txtImportPrice = new JTextField(model.getValueAt(row, 4).toString());
-        JTextField txtStock = new JTextField(model.getValueAt(row, 5).toString());
-        JTextField txtWarranty = new JTextField(model.getValueAt(row, 6).toString());
-        JTextField txtSpecs = new JTextField(model.getValueAt(row, 7).toString());
-        JTextField txtDesc = new JTextField(model.getValueAt(row, 8).toString());
-        
-        JComboBox<CategoryDTO> cbCategory = new JComboBox<>();
-        List<CategoryDTO> allCats = CategoryApi.getAllCategories();
-        for (CategoryDTO c : allCats) cbCategory.addItem(c);
-        
-        int currentCatId = (int) model.getValueAt(row, 10); 
-        for (int i = 0; i < cbCategory.getItemCount(); i++) {
-            if (cbCategory.getItemAt(i).getId() == currentCatId) {
-                cbCategory.setSelectedIndex(i);
-                break;
-            }
-        }
-        
-        Object[] form = { 
-            "Tên:", txtName, "SKU:", txtSku, "Giá bán (Gốc):", txtPrice, 
-            "Giá nhập:", txtImportPrice, "Tồn kho tổng:", txtStock,
-            "Bảo hành (tháng):", txtWarranty, "Thông số kỹ thuật:", txtSpecs, 
-            "Ghi chú:", txtDesc, "Danh mục:", cbCategory 
-        };
-        
-        if (JOptionPane.showConfirmDialog(this, form, "Sửa sản phẩm chính", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
-            CategoryDTO cat = (CategoryDTO) cbCategory.getSelectedItem();
-            
-            boolean ok = ProductApi.updateProduct(
-                id, txtName.getText(), txtSku.getText(), 
-                Double.parseDouble(txtPrice.getText()), 
-                Double.parseDouble(txtImportPrice.getText()), 
-                Integer.parseInt(txtStock.getText()), 
-                Integer.parseInt(txtWarranty.getText()), 
-                cat.getId(), txtDesc.getText(), txtSpecs.getText(), 1, 1
-            );
-            if (ok) loadProducts();
         }
     }
 
@@ -306,59 +118,289 @@ public class ProductJframe extends JPanel{
             "Ghi chú:", txtDesc, "Danh mục:", cbCategory 
         };
         
-        if (JOptionPane.showConfirmDialog(this, form, "Thêm sản phẩm chính mới", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+        if (JOptionPane.showConfirmDialog(this, form, "Thêm sản phẩm mới", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             CategoryDTO cat = (CategoryDTO) cbCategory.getSelectedItem();
             boolean ok = ProductApi.createProduct(
-                txtName.getText(), txtSku.getText(), 
-                Double.parseDouble(txtPrice.getText()), 
-                Double.parseDouble(txtImportPrice.getText()), 
-                Integer.parseInt(txtStock.getText()), 
-                Integer.parseInt(txtWarranty.getText()), 
-                cat.getId(), txtDesc.getText(), txtSpecs.getText(), 1, 1
+                txtName.getText(), txtSku.getText(), Double.parseDouble(txtPrice.getText()), 
+                Double.parseDouble(txtImportPrice.getText()), Integer.parseInt(txtStock.getText()), 
+                Integer.parseInt(txtWarranty.getText()), cat.getId(), txtDesc.getText(), txtSpecs.getText(), 1, 1
             );
-            if (ok) loadProducts();
-        }
-    }
-
-    private void deleteSelected() {
-        int row = table.getSelectedRow();
-        if (row == -1) return;
-        int id = (int) model.getValueAt(row, 0);
-        if (JOptionPane.showConfirmDialog(this, "Xóa sản phẩm này sẽ xóa CẢ các phiên bản. Tiếp tục?") == JOptionPane.YES_OPTION) {
-            if (ProductApi.deleteProduct(id)) loadProducts();
-        }
-    }
-
-    private void uploadImage() {
-        int row = table.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn 1 sản phẩm ở bảng trên để thêm ảnh!");
-            return;
-        }
-        
-        int productId = (int) model.getValueAt(row, 0);
-        JFileChooser chooser = new JFileChooser();
-        
-        // BẬT CHẾ ĐỘ CHỌN NHIỀU FILE CÙNG LÚC
-        chooser.setMultiSelectionEnabled(true);
-        
-        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            // Lấy danh sách các file đã chọn
-            File[] files = chooser.getSelectedFiles();
-            
-            if (files.length == 0) return;
-            
-            // Gọi hàm API mới (nhận mảng files)
-            boolean ok = ProductApi.uploadImages(productId, files);
-            
             if (ok) {
-                JOptionPane.showMessageDialog(this, "Tuyệt vời! Đã upload thành công " + files.length + " ảnh.");
-            } else {
-                JOptionPane.showMessageDialog(this, "Upload thất bại. Vui lòng check lại kết nối hoặc dung lượng ảnh!");
+                JOptionPane.showMessageDialog(this, "Thêm thành công! Hãy bấm 'Chi tiết' để thêm Ảnh & Phiên bản.");
+                loadProducts();
             }
         }
     }
 
+    // =========================================================================
+    // 🔥 TRÙM CUỐI: DIALOG QUẢN LÝ CHI TIẾT (ALL-IN-ONE)
+    // =========================================================================
+    private void showProductDetailDialog(int productId) {
+        String jsonDetail = ProductApi.getProductDetail(productId);
+        if (jsonDetail == null) return;
+        
+        JSONObject product = new JSONObject(jsonDetail);
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Quản lý Chi Tiết Sản Phẩm: " + product.optString("name"), true);
+        dialog.setSize(900, 650);
+        dialog.setLocationRelativeTo(this);
+        
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
+
+        // --- TAB 1: THÔNG TIN CHUNG ---
+        JPanel tabInfo = createInfoTab(productId, product, dialog);
+        tabbedPane.addTab("📋 Thông Tin Chung", tabInfo);
+
+        // --- TAB 2: QUẢN LÝ PHIÊN BẢN ---
+        JPanel tabVariants = createVariantTab(productId, product);
+        tabbedPane.addTab("📦 Quản Lý Phiên Bản", tabVariants);
+
+        // --- TAB 3: QUẢN LÝ HÌNH ẢNH (GALLERY) ---
+        JPanel tabImages = createImageTab(productId, product);
+        tabbedPane.addTab("🖼️ Hình Ảnh", tabImages);
+
+        dialog.add(tabbedPane);
+        dialog.setVisible(true);
+    }
+
+    // Giao diện Tab 1: Form Sửa thông tin
+    private JPanel createInfoTab(int productId, JSONObject product, JDialog parentDialog) {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        // Tăng khoảng cách dòng lên 15px cho thoáng
+        JPanel formPanel = new JPanel(new GridLayout(0, 2, 10, 15)); 
+        
+        JTextField txtName = new JTextField(product.optString("name"));
+        JTextField txtSku = new JTextField(product.optString("sku"));
+        JTextField txtPrice = new JTextField(String.valueOf(product.optDouble("price", 0)));
+        JTextField txtImportPrice = new JTextField(String.valueOf(product.optDouble("import_price", 0)));
+        JTextField txtStock = new JTextField(String.valueOf(product.optInt("stock_quantity", 0)));
+        JTextField txtWarranty = new JTextField(String.valueOf(product.optInt("warranty_month", 0)));
+        JTextField txtSpecs = new JTextField(product.optString("specifications"));
+        JTextField txtDesc = new JTextField(product.optString("description"));
+        
+        // Làm phồng các ô nhập liệu lên cho đẹp
+        JTextField[] textFields = {txtName, txtSku, txtPrice, txtImportPrice, txtStock, txtWarranty, txtSpecs, txtDesc};
+        for (JTextField tf : textFields) {
+            tf.setPreferredSize(new Dimension(tf.getWidth(), 35));
+            tf.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        }
+        
+        JComboBox<CategoryDTO> cbCategory = new JComboBox<>();
+        cbCategory.setPreferredSize(new Dimension(cbCategory.getWidth(), 35));
+        cbCategory.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        List<CategoryDTO> allCats = CategoryApi.getAllCategories();
+        for (CategoryDTO c : allCats) {
+            cbCategory.addItem(c);
+            if (c.getId() == product.optInt("category_id")) {
+                cbCategory.setSelectedItem(c);
+            }
+        }
+
+        formPanel.add(new JLabel("Tên sản phẩm:")); formPanel.add(txtName);
+        formPanel.add(new JLabel("Mã SKU:")); formPanel.add(txtSku);
+        formPanel.add(new JLabel("Giá bán (VNĐ):")); formPanel.add(txtPrice);
+        formPanel.add(new JLabel("Giá nhập (VNĐ):")); formPanel.add(txtImportPrice);
+        formPanel.add(new JLabel("Tổng tồn kho:")); formPanel.add(txtStock);
+        formPanel.add(new JLabel("Bảo hành (Tháng):")); formPanel.add(txtWarranty);
+        formPanel.add(new JLabel("Danh mục:")); formPanel.add(cbCategory);
+        formPanel.add(new JLabel("Thông số kỹ thuật:")); formPanel.add(txtSpecs);
+        formPanel.add(new JLabel("Mô tả / Ghi chú:")); formPanel.add(txtDesc);
+
+        // 🔥 BÍ QUYẾT FIX UI: Nhét formPanel vào khung NORTH của một panel trung gian
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.add(formPanel, BorderLayout.NORTH);
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        
+        JButton btnDelete = new JButton("🗑️ Xóa Toàn Bộ Sản Phẩm");
+        styleButton(btnDelete, new Color(220, 53, 69));
+        btnDelete.addActionListener(e -> {
+            if (JOptionPane.showConfirmDialog(panel, "Xóa sản phẩm này cùng toàn bộ ảnh và phiên bản?") == JOptionPane.YES_OPTION) {
+                if (ProductApi.deleteProduct(productId)) {
+                    parentDialog.dispose();
+                    loadProducts();
+                }
+            }
+        });
+
+        JButton btnSave = new JButton("💾 Lưu Thay Đổi");
+        styleButton(btnSave, new Color(0, 102, 204));
+        btnSave.addActionListener(e -> {
+            CategoryDTO cat = (CategoryDTO) cbCategory.getSelectedItem();
+            boolean ok = ProductApi.updateProduct(
+                productId, txtName.getText(), txtSku.getText(), Double.parseDouble(txtPrice.getText()), 
+                Double.parseDouble(txtImportPrice.getText()), Integer.parseInt(txtStock.getText()), 
+                Integer.parseInt(txtWarranty.getText()), cat.getId(), txtDesc.getText(), txtSpecs.getText(), 1, 1
+            );
+            if (ok) {
+                JOptionPane.showMessageDialog(panel, "Đã lưu thông tin chung!");
+                loadProducts();
+            }
+        });
+
+        btnPanel.add(btnDelete);
+        btnPanel.add(btnSave);
+        
+        // Đưa wrapper vào cuộn thay vì đưa trực tiếp formPanel
+        panel.add(new JScrollPane(wrapper), BorderLayout.CENTER);
+        panel.add(btnPanel, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    // Giao diện Tab 2: Quản lý Bảng Phiên bản
+    private JPanel createVariantTab(int productId, JSONObject product) {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        DefaultTableModel vModel = new DefaultTableModel(new String[]{"ID", "Nhóm", "Tên Phiên Bản", "Giá +", "Tồn kho"}, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        JTable vTable = new JTable(vModel);
+        styleTable(vTable);
+
+        // Đổ dữ liệu
+        if (product.has("variants")) {
+            JSONArray vars = product.getJSONArray("variants");
+            for (int i = 0; i < vars.length(); i++) {
+                JSONObject v = vars.getJSONObject(i);
+                vModel.addRow(new Object[]{
+                    v.getInt("id"), v.optString("variant_group"), v.optString("variant_name"),
+                    v.optDouble("additional_price", 0), v.optInt("stock_quantity", 0)
+                });
+            }
+        }
+
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton btnAddV = new JButton("+ Thêm Phiên Bản"); styleButton(btnAddV, new Color(0, 153, 76));
+        JButton btnDelV = new JButton("- Xóa Đã Chọn"); styleButton(btnDelV, new Color(220, 53, 69));
+
+        btnAddV.addActionListener(e -> {
+            JComboBox<String> cbGroup = new JComboBox<>(new String[]{"Màu sắc", "Dung lượng", "Kích thước"});
+            JTextField txtName = new JTextField(); JTextField txtPrice = new JTextField("0"); JTextField txtStock = new JTextField("0");
+            Object[] form = { "Nhóm:", cbGroup, "Tên:", txtName, "Giá cộng thêm:", txtPrice, "Kho:", txtStock };
+            if (JOptionPane.showConfirmDialog(panel, form, "Thêm Phiên Bản", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+                if (ProductApi.addVariant(productId, cbGroup.getSelectedItem().toString(), txtName.getText(), Double.parseDouble(txtPrice.getText()), Integer.parseInt(txtStock.getText()))) {
+                    JOptionPane.showMessageDialog(panel, "Thêm thành công! Đóng mở lại cửa sổ để cập nhật danh sách."); // Cách nạp lại có thể tối ưu sau
+                }
+            }
+        });
+
+        btnDelV.addActionListener(e -> {
+            int row = vTable.getSelectedRow();
+            if (row != -1) {
+                if (ProductApi.deleteVariant((int) vModel.getValueAt(row, 0))) {
+                    vModel.removeRow(row);
+                }
+            }
+        });
+
+        topPanel.add(btnAddV); topPanel.add(btnDelV);
+        panel.add(topPanel, BorderLayout.NORTH);
+        panel.add(new JScrollPane(vTable), BorderLayout.CENTER);
+        return panel;
+    }
+
+    // Giao diện Tab 3: Thư viện Ảnh (Gallery)
+    private JPanel createImageTab(int productId, JSONObject product) {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Nút thêm ảnh bự chà bá ở trên cùng
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JButton btnUpload = new JButton("☁️ UP ẢNH MỚI LÊN CLOUDINARY");
+        styleButton(btnUpload, new Color(102, 51, 153));
+        topPanel.add(btnUpload);
+        panel.add(topPanel, BorderLayout.NORTH);
+
+        // Khu vực chứa lưới hình ảnh
+        JPanel galleryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
+        galleryPanel.setBackground(new Color(245, 245, 245));
+        
+        if (product.has("images")) {
+            JSONArray images = product.getJSONArray("images");
+            for (int i = 0; i < images.length(); i++) {
+                JSONObject img = images.getJSONObject(i);
+                int imgId = img.getInt("id");
+                String url = img.getString("image_url");
+
+                // Thẻ chứa 1 hình ảnh
+                JPanel card = new JPanel(new BorderLayout());
+                card.setBackground(Color.WHITE);
+                card.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1));
+                card.setPreferredSize(new Dimension(150, 180));
+
+                JLabel lblPic = new JLabel("⏳ Đang tải...", SwingConstants.CENTER);
+                lblPic.setPreferredSize(new Dimension(150, 140));
+                
+                // Dùng Luồng phụ để load ảnh từ mạng về không làm đơ phần mềm
+                new SwingWorker<ImageIcon, Void>() {
+                    @Override
+                    protected ImageIcon doInBackground() throws Exception {
+                        Image image = ImageIO.read(new URL(url));
+                        return new ImageIcon(image.getScaledInstance(140, 130, Image.SCALE_SMOOTH));
+                    }
+                    @Override
+                    protected void done() {
+                        try {
+                            lblPic.setIcon(get());
+                            lblPic.setText(""); // Xóa chữ đang tải
+                        } catch (Exception ex) { lblPic.setText("Lỗi load ảnh"); }
+                    }
+                }.execute();
+
+                JButton btnDeleteImg = new JButton("❌ Xóa Ảnh Này");
+                btnDeleteImg.setBackground(new Color(255, 240, 240));
+                btnDeleteImg.setForeground(Color.RED);
+                btnDeleteImg.setFocusPainted(false);
+                btnDeleteImg.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                
+                btnDeleteImg.addActionListener(e -> {
+                    if (JOptionPane.showConfirmDialog(panel, "Xóa vĩnh viễn ảnh này?") == JOptionPane.YES_OPTION) {
+                        if (ProductApi.deleteImage(imgId)) {
+                            galleryPanel.remove(card);
+                            galleryPanel.revalidate();
+                            galleryPanel.repaint();
+                        } else {
+                            JOptionPane.showMessageDialog(panel, "Lỗi khi xóa ảnh!");
+                        }
+                    }
+                });
+
+                card.add(lblPic, BorderLayout.CENTER);
+                card.add(btnDeleteImg, BorderLayout.SOUTH);
+                galleryPanel.add(card);
+            }
+        }
+        
+        JScrollPane scrollGallery = new JScrollPane(galleryPanel);
+        scrollGallery.getVerticalScrollBar().setUnitIncrement(16);
+        panel.add(scrollGallery, BorderLayout.CENTER);
+
+        // Xử lý nút Up ảnh
+        btnUpload.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setMultiSelectionEnabled(true);
+            if (chooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
+                File[] files = chooser.getSelectedFiles();
+                if (files.length > 0) {
+                    if (ProductApi.uploadImages(productId, files)) {
+                        JOptionPane.showMessageDialog(panel, "Up thành công! Đóng mở lại Chi tiết để thấy ảnh mới.");
+                    } else {
+                        JOptionPane.showMessageDialog(panel, "Upload thất bại!");
+                    }
+                }
+            }
+        });
+
+        return panel;
+    }
+
+    // Các hàm Helper dùng chung
     private void styleButton(JButton btn, Color color) {
         btn.setBackground(color); btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false); btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -369,7 +411,7 @@ public class ProductJframe extends JPanel{
     private void styleTable(JTable table) {
         table.setRowHeight(35);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION); // Chỉ cho chọn 1 dòng
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JTableHeader header = table.getTableHeader();
         header.setFont(new Font("Segoe UI", Font.BOLD, 14));
         header.setBackground(new Color(40, 40, 40)); 

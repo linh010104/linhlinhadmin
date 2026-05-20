@@ -225,4 +225,17 @@ public class ProductApi {
             return false;
         }
     }
+    public static boolean deleteImage(int imageId) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            // Đảm bảo route này khớp với Node.js của ông (Thường là /api/products/images/:id)
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(ApiConfig.BASE_URL + "/products/images/" + imageId)) 
+                    .header("Authorization", "Bearer " + AuthSession.token)
+                    .DELETE()
+                    .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) { e.printStackTrace(); return false; }
+    }
 }
