@@ -169,8 +169,8 @@ public class ProductJframe extends JPanel{
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         
-        // Tăng khoảng cách dòng lên 15px cho thoáng
-        JPanel formPanel = new JPanel(new GridLayout(0, 2, 10, 15)); 
+        // 1. Khung trên (GridLayout) chỉ chứa các trường ngắn
+        JPanel topForm = new JPanel(new GridLayout(0, 2, 10, 15)); 
         
         JTextField txtName = new JTextField(product.optString("name"));
         JTextField txtSku = new JTextField(product.optString("sku"));
@@ -178,11 +178,8 @@ public class ProductJframe extends JPanel{
         JTextField txtImportPrice = new JTextField(String.valueOf(product.optDouble("import_price", 0)));
         JTextField txtStock = new JTextField(String.valueOf(product.optInt("stock_quantity", 0)));
         JTextField txtWarranty = new JTextField(String.valueOf(product.optInt("warranty_month", 0)));
-        JTextField txtSpecs = new JTextField(product.optString("specifications"));
-        JTextField txtDesc = new JTextField(product.optString("description"));
         
-        // Làm phồng các ô nhập liệu lên cho đẹp
-        JTextField[] textFields = {txtName, txtSku, txtPrice, txtImportPrice, txtStock, txtWarranty, txtSpecs, txtDesc};
+        JTextField[] textFields = {txtName, txtSku, txtPrice, txtImportPrice, txtStock, txtWarranty};
         for (JTextField tf : textFields) {
             tf.setPreferredSize(new Dimension(tf.getWidth(), 35));
             tf.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -191,7 +188,6 @@ public class ProductJframe extends JPanel{
         JComboBox<CategoryDTO> cbCategory = new JComboBox<>();
         cbCategory.setPreferredSize(new Dimension(cbCategory.getWidth(), 35));
         cbCategory.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        
         List<CategoryDTO> allCats = CategoryApi.getAllCategories();
         for (CategoryDTO c : allCats) {
             cbCategory.addItem(c);
@@ -200,22 +196,59 @@ public class ProductJframe extends JPanel{
             }
         }
 
-        formPanel.add(new JLabel("Tên sản phẩm:")); formPanel.add(txtName);
-        formPanel.add(new JLabel("Mã SKU:")); formPanel.add(txtSku);
-        formPanel.add(new JLabel("Giá bán (VNĐ):")); formPanel.add(txtPrice);
-        formPanel.add(new JLabel("Giá nhập (VNĐ):")); formPanel.add(txtImportPrice);
-        formPanel.add(new JLabel("Tổng tồn kho:")); formPanel.add(txtStock);
-        formPanel.add(new JLabel("Bảo hành (Tháng):")); formPanel.add(txtWarranty);
-        formPanel.add(new JLabel("Danh mục:")); formPanel.add(cbCategory);
-        formPanel.add(new JLabel("Thông số kỹ thuật:")); formPanel.add(txtSpecs);
-        formPanel.add(new JLabel("Mô tả / Ghi chú:")); formPanel.add(txtDesc);
+        topForm.add(new JLabel("Tên sản phẩm:")); topForm.add(txtName);
+        topForm.add(new JLabel("Mã SKU:")); topForm.add(txtSku);
+        topForm.add(new JLabel("Giá bán (VNĐ):")); topForm.add(txtPrice);
+        topForm.add(new JLabel("Giá nhập (VNĐ):")); topForm.add(txtImportPrice);
+        topForm.add(new JLabel("Tổng tồn kho:")); topForm.add(txtStock);
+        topForm.add(new JLabel("Bảo hành (Tháng):")); topForm.add(txtWarranty);
+        topForm.add(new JLabel("Danh mục:")); topForm.add(cbCategory);
 
-        // 🔥 BÍ QUYẾT FIX UI: Nhét formPanel vào khung NORTH của một panel trung gian
+        // 2. Khung dưới (BoxLayout) dành riêng cho các trường cần gõ dài
+        JPanel bottomForm = new JPanel();
+        bottomForm.setLayout(new BoxLayout(bottomForm, BoxLayout.Y_AXIS));
+        bottomForm.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
+
+        JLabel lblSpecs = new JLabel("Thông số kỹ thuật:");
+        lblSpecs.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Dùng JTextArea thay vì JTextField, bật tính năng tự xuống dòng
+        JTextArea txtSpecs = new JTextArea(product.optString("specifications"));
+        txtSpecs.setLineWrap(true);
+        txtSpecs.setWrapStyleWord(true);
+        txtSpecs.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JScrollPane scrollSpecs = new JScrollPane(txtSpecs);
+        scrollSpecs.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scrollSpecs.setPreferredSize(new Dimension(400, 80)); // Set chiều cao 80px
+
+        JLabel lblDesc = new JLabel("Mô tả / Ghi chú:");
+        lblDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblDesc.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        
+        JTextArea txtDesc = new JTextArea(product.optString("description"));
+        txtDesc.setLineWrap(true);
+        txtDesc.setWrapStyleWord(true);
+        txtDesc.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JScrollPane scrollDesc = new JScrollPane(txtDesc);
+        scrollDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scrollDesc.setPreferredSize(new Dimension(400, 80));
+
+        bottomForm.add(lblSpecs);
+        bottomForm.add(Box.createVerticalStrut(5));
+        bottomForm.add(scrollSpecs);
+        bottomForm.add(lblDesc);
+        bottomForm.add(Box.createVerticalStrut(5));
+        bottomForm.add(scrollDesc);
+
+        // 3. Gộp cả 2 khung lại
+        JPanel mainFormPanel = new JPanel(new BorderLayout());
+        mainFormPanel.add(topForm, BorderLayout.NORTH);
+        mainFormPanel.add(bottomForm, BorderLayout.CENTER);
+
         JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.add(formPanel, BorderLayout.NORTH);
+        wrapper.add(mainFormPanel, BorderLayout.NORTH);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        
         JButton btnDelete = new JButton("🗑️ Xóa Toàn Bộ Sản Phẩm");
         styleButton(btnDelete, new Color(220, 53, 69));
         btnDelete.addActionListener(e -> {
@@ -245,7 +278,6 @@ public class ProductJframe extends JPanel{
         btnPanel.add(btnDelete);
         btnPanel.add(btnSave);
         
-        // Đưa wrapper vào cuộn thay vì đưa trực tiếp formPanel
         panel.add(new JScrollPane(wrapper), BorderLayout.CENTER);
         panel.add(btnPanel, BorderLayout.SOUTH);
         return panel;
