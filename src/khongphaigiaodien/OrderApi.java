@@ -34,6 +34,7 @@ public class OrderApi {
                 JSONArray arr = new JSONArray(res.body());
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject o = arr.getJSONObject(i);
+                    // ✅ CẬP NHẬT: Lấy thêm dữ liệu payment_status và vnpay_transaction_no từ JSON
                     list.add(new OrderDTO(
                             o.getInt("id"),
                             o.optString("receiver_name", "N/A"),
@@ -42,7 +43,9 @@ public class OrderApi {
                             o.getDouble("total_amount"),
                             o.getString("status"),
                             o.optString("payment_method", "COD"),
-                            o.optString("created_at", "")
+                            o.optString("created_at", ""),
+                            o.optString("payment_status", "PENDING"),
+                            o.optString("vnpay_transaction_no", "")
                     ));
                 }
             }
@@ -116,3 +119,4 @@ public class OrderApi {
         return "Không tải được lý do";
     }
 }
+

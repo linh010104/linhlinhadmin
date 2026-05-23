@@ -10,10 +10,10 @@ package khongphaigiaodien;
  */
 public class ApiConfig {
     // 1. MÔI TRƯỜNG LOCALHOST (Dùng khi code và test dưới máy)
-   // public static final String BASE_URL = "http://localhost:3000/api";
+    public static final String BASE_URL = "http://localhost:3000/api";
 
     // 2. MÔI TRƯỜNG PUBLIC (Dùng khi chạy thật trên VPS hoặc Render)
-    public static final String BASE_URL = "https://linhlinhstore.onrender.com/api";
+    //public static final String BASE_URL = "https://linhlinhstore.onrender.com/api";
     
 
 }

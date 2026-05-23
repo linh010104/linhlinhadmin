@@ -77,7 +77,8 @@ public class OrderJFrame extends JPanel{
              @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
-        model.setColumnIdentifiers(new String[]{ "ID", "Người nhận", "SĐT", "Địa chỉ", "Tổng tiền", "Thanh toán", "Trạng thái", "Ngày tạo" });
+        // ✅ CẬP NHẬT TÊN CỘT ĐỂ HIỂN THỊ THÊM TRẠNG THÁI THANH TOÁN VÀ MÃ GD VNPay
+        model.setColumnIdentifiers(new String[]{ "ID", "Người nhận", "SĐT", "Địa chỉ", "Tổng tiền", "PT Thanh toán", "TT Thanh toán", "Mã GD VNPay", "Trạng thái", "Ngày tạo" });
 
         table = new JTable(model);
         styleTable(table);
@@ -86,8 +87,15 @@ public class OrderJFrame extends JPanel{
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                String status = (String) table.getModel().getValueAt(row, 6);
+                String status = (String) table.getModel().getValueAt(row, 8); // ✅ Đổi index từ 6 thành 8 do đã chèn thêm 2 cột ở trước
+                String paymentStatus = (String) table.getModel().getValueAt(row, 6);
                 
+                // Tô màu riêng biệt nếu đơn hàng ĐÃ THANH TOÁN VNPay (PAID)
+                if ("PAID".equals(paymentStatus) && column == 6) {
+                    c.setForeground(new Color(46, 204, 113)); // Màu xanh lá uy tín
+                    c.setFont(c.getFont().deriveFont(Font.BOLD));
+                }
+
                 if ("RETURN_REQUESTED".equals(status)) {
                     c.setBackground(new Color(255, 235, 238));
                     c.setForeground(new Color(192, 57, 43));
@@ -148,12 +156,44 @@ public class OrderJFrame extends JPanel{
         SwingUtilities.invokeLater(() -> {
             List<OrderDTO> orders = OrderApi.getAllOrders();
             String filter = (String) cbbFilter.getSelectedItem();
-            int reqCount = 0;
-            for(OrderDTO o : orders) if("RETURN_REQUESTED".equals(o.getStatus())) reqCount++;
             
-            if (reqCount > currentOrderCount) Toolkit.getDefaultToolkit().beep();
+            int reqCount = 0; // Đếm yêu cầu trả hàng
+            int stuckVnpayCount = 0; // Đếm đơn VNPay treo quá 30p
+            
+            for(OrderDTO o : orders) {
+                if("RETURN_REQUESTED".equals(o.getStatus())) {
+                    reqCount++;
+                }
+                // Tính toán đơn VNPay treo (NEW + VNPAY + PENDING)
+                if("NEW".equals(o.getStatus()) && "VNPAY".equals(o.getPaymentMethod()) && "PENDING".equals(o.getPaymentStatus())) {
+                    try {
+                        // So sánh thời gian tạo đơn với thời gian hiện tại
+                        java.time.LocalDateTime createdAt = java.time.LocalDateTime.parse(o.getCreatedAt().replace(" ", "T").substring(0, 19));
+                        long minutesBetween = java.time.temporal.ChronoUnit.MINUTES.between(createdAt, java.time.LocalDateTime.now());
+                        
+                        if(minutesBetween >= 30) {
+                            stuckVnpayCount++;
+                        }
+                    } catch (Exception ex) {
+                        // Bỏ qua nếu parse ngày tháng lỗi
+                    }
+                }
+            }
+            
+            if (reqCount > currentOrderCount || stuckVnpayCount > 0) Toolkit.getDefaultToolkit().beep();
             currentOrderCount = reqCount;
-            lblStatus.setText("Cập nhật: " + java.time.LocalTime.now() + " | Yêu cầu trả hàng mới: " + reqCount);
+            
+            // 🔥 CẬP NHẬT LABEL TRẠNG THÁI (Đổi màu đỏ nếu có đơn treo)
+            String statusText = "Cập nhật: " + java.time.LocalTime.now() + " | Yêu cầu trả hàng: " + reqCount;
+            if (stuckVnpayCount > 0) {
+                statusText += " | ⚠️ CẢNH BÁO: CÓ " + stuckVnpayCount + " ĐƠN VNPAY TREO QUÁ 30 PHÚT!";
+                lblStatus.setForeground(Color.RED);
+                lblStatus.setFont(lblStatus.getFont().deriveFont(Font.BOLD));
+            } else {
+                lblStatus.setForeground(Color.GRAY);
+                lblStatus.setFont(lblStatus.getFont().deriveFont(Font.PLAIN));
+            }
+            lblStatus.setText(statusText);
 
             model.setRowCount(0);
             for (OrderDTO o : orders) {
@@ -161,6 +201,8 @@ public class OrderJFrame extends JPanel{
                     model.addRow(new Object[]{ 
                         o.getId(), o.getReceiverName(), o.getPhone(), o.getAddress(), 
                         o.getTotalAmount(), o.getPaymentMethod(), 
+                        o.getPaymentStatus(), 
+                        o.getVnpayTransactionNo() == null || o.getVnpayTransactionNo().isEmpty() ? "Trống" : o.getVnpayTransactionNo(), 
                         o.getStatus(), o.getCreatedAt() 
                     });
                 }
@@ -171,13 +213,26 @@ public class OrderJFrame extends JPanel{
     private void changeStatus(String newStatus) {
         int row = table.getSelectedRow();
         if (row == -1) { JOptionPane.showMessageDialog(this, "Vui lòng chọn đơn hàng!"); return; }
-        int orderId = (int) model.getValueAt(row, 0);
         
-        if (JOptionPane.showConfirmDialog(this, "Đổi trạng thái thành " + newStatus + "?", "Xác nhận", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-            if (OrderApi.updateStatus(orderId, newStatus)) {
-                JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
-                loadOrders();
-            }
+        int orderId = (int) model.getValueAt(row, 0);
+        String paymentStatus = (String) model.getValueAt(row, 6); // Cột trạng thái thanh toán
+        
+        // ✅ Cảnh báo nếu Admin chọn Hủy đơn nhưng đơn này đã được khách chuyển tiền qua VNPay
+        if ("CANCELLED".equals(newStatus) && "PAID".equals(paymentStatus)) {
+            int confirm = JOptionPane.showConfirmDialog(this, 
+                "⚠️ Đơn hàng này đã được KHÁCH THANH TOÁN (VNPay).\nBạn có chắc chắn muốn hủy? (Cần hoàn tiền thủ công cho khách sau khi hủy)", 
+                "Cảnh báo hủy đơn đã thanh toán", 
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm != JOptionPane.YES_OPTION) return;
+        } else {
+             if (JOptionPane.showConfirmDialog(this, "Đổi trạng thái thành " + newStatus + "?", "Xác nhận", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) {
+                 return;
+             }
+        }
+
+        if (OrderApi.updateStatus(orderId, newStatus)) {
+            JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
+            loadOrders();
         }
     }
 
@@ -187,17 +242,24 @@ public class OrderJFrame extends JPanel{
         if (row == -1) { JOptionPane.showMessageDialog(this, "Chọn đơn hàng muốn xử lý!"); return; }
 
         int orderId = (int) model.getValueAt(row, 0);
-        String currentStatus = (String) model.getValueAt(row, 6);
+        String currentStatus = (String) model.getValueAt(row, 8); // ✅ Đổi index từ 6 thành 8
+        String paymentStatus = (String) model.getValueAt(row, 6);
 
         if (!"RETURN_REQUESTED".equals(currentStatus)) {
             JOptionPane.showMessageDialog(this, "Chỉ xử lý được những đơn đang có Yêu cầu trả hàng (RETURN_REQUESTED)!");
             return;
         }
+        
+        // ✅ Nếu khách yêu cầu trả hàng, hệ thống nhắc admin nhớ hoàn lại tiền VNPay
+        String msgVNPay = "";
+        if ("PAID".equals(paymentStatus)) {
+            msgVNPay = "\n(🔔 Lưu ý: Đơn này khách đã thanh toán VNPay, hãy nhớ hoàn tiền cho khách qua cổng)";
+        }
 
         String khachYeuCau = OrderApi.getOrderReturnReason(orderId);
 
         JTextArea txtKhach = new JTextArea(4, 30);
-        txtKhach.setText(khachYeuCau);
+        txtKhach.setText(khachYeuCau + msgVNPay);
         txtKhach.setEditable(false);
         txtKhach.setLineWrap(true);
         txtKhach.setWrapStyleWord(true);

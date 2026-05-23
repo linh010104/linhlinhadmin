@@ -17,8 +17,13 @@ public class OrderDTO {
     private String status;
     private String paymentMethod;
     private String createdAt;
+    
+    // ✅ THÊM 2 TRƯỜNG DỮ LIỆU VNPay VÀO ĐÂY
+    private String paymentStatus;
+    private String vnpayTransactionNo;
 
-    public OrderDTO(int id, String receiverName, String phone, String address, double totalAmount, String status, String paymentMethod, String createdAt) {
+    // ✅ CẬP NHẬT LẠI CONSTRUCTOR ĐỂ NHẬN 2 TRƯỜNG MỚI NÀY
+    public OrderDTO(int id, String receiverName, String phone, String address, double totalAmount, String status, String paymentMethod, String createdAt, String paymentStatus, String vnpayTransactionNo) {
         this.id = id;
         this.receiverName = receiverName;
         this.phone = phone;
@@ -27,6 +32,8 @@ public class OrderDTO {
         this.status = status;
         this.paymentMethod = paymentMethod;
         this.createdAt = createdAt;
+        this.paymentStatus = paymentStatus;
+        this.vnpayTransactionNo = vnpayTransactionNo;
     }
 
     public int getId() { return id; }
@@ -37,6 +44,10 @@ public class OrderDTO {
     public String getStatus() { return status; }
     public String getPaymentMethod() { return paymentMethod; }
     public String getCreatedAt() { return createdAt; }
+    
+    // ✅ THÊM GETTER CHO 2 TRƯỜNG MỚI
+    public String getPaymentStatus() { return paymentStatus; }
+    public String getVnpayTransactionNo() { return vnpayTransactionNo; }
     
     public void setStatus(String status) { this.status = status; }
 }
