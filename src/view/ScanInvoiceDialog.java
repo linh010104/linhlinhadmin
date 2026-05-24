@@ -148,7 +148,7 @@ public class ScanInvoiceDialog extends JDialog {
     // --- LOGIC GỌI AI VÀ ĐỐI CHIẾU SẢN PHẨM CŨ/MỚI ---
     private void scanInvoiceWithAI() {
         if (selectedFile == null) return;
-        JOptionPane.showMessageDialog(this, "Đang gửi ảnh sang AI...\nVui lòng đợi 3-5 giây...");
+        JOptionPane.showMessageDialog(this, "Đang gửi ảnh sang AI...\nVui lòng đợi vài giây (tùy thuộc vào mạng)...");
         
         new SwingWorker<Void, Void>() {
             @Override
@@ -165,7 +165,10 @@ public class ScanInvoiceDialog extends JDialog {
                     }
 
                     // 2. GỬI ẢNH CHO AI
-                    HttpClient client = HttpClient.newHttpClient();
+                    HttpClient client = HttpClient.newBuilder()
+                            .connectTimeout(java.time.Duration.ofSeconds(60)) // Đảm bảo Client không bỏ cuộc sớm
+                            .build();
+                            
                     String boundary = "---JavaHttpClientBoundary" + System.currentTimeMillis();
                     byte[] fileBytes = Files.readAllBytes(selectedFile.toPath());
                     
@@ -182,8 +185,9 @@ public class ScanInvoiceDialog extends JDialog {
                     System.arraycopy(tailBytes, 0, body, headBytes.length + fileBytes.length, tailBytes.length);
 
                     HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create("http://localhost:3000/api/ai/scan-invoice"))
+                            .uri(URI.create(khongphaigiaodien.ApiConfig.BASE_URL + "/ai/scan-invoice")) // Dùng link động
                             .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                            .timeout(java.time.Duration.ofSeconds(60)) // Ép Java kiên nhẫn chờ 60s
                             .POST(HttpRequest.BodyPublishers.ofByteArray(body))
                             .build();
 
@@ -280,7 +284,7 @@ public class ScanInvoiceDialog extends JDialog {
         }
     }
 
-    // --- LOGIC LƯU PHIẾU NHẬP (GIỮ NGUYÊN) ---
+    // --- LOGIC LƯU PHIẾU NHẬP ---
     private void saveToDatabase() {
         if (tableModel.getRowCount() == 0) {
             JOptionPane.showMessageDialog(this, "Bảng trống!");
@@ -313,10 +317,14 @@ public class ScanInvoiceDialog extends JDialog {
             }
             dataToSave.put("items", itemsArray);
 
-            HttpClient client = HttpClient.newHttpClient();
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(15)) // Chờ kết nối 15s
+                    .build();
+
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:3000/api/import/create"))
+                    .uri(URI.create(khongphaigiaodien.ApiConfig.BASE_URL + "/import/create")) // Dùng link động
                     .header("Content-Type", "application/json")
+                    .timeout(java.time.Duration.ofSeconds(30)) // Lưu DB chờ 30s
                     .POST(HttpRequest.BodyPublishers.ofString(dataToSave.toString(), StandardCharsets.UTF_8))
                     .build();
 
