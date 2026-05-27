@@ -238,4 +238,24 @@ public class ProductApi {
             return response.statusCode() == 200;
         } catch (Exception e) { e.printStackTrace(); return false; }
     }
+    public static boolean updateDiscount(String productId, int discountPercent) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            // Tạo cục JSON chứa % giảm
+            String json = String.format("{\"discount_percent\": %d}", discountPercent);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(ApiConfig.BASE_URL + "/products/" + productId + "/discount"))
+                    .header("Content-Type", "application/json")
+                    // .header("Authorization", "Bearer " + AuthSession.token) // Mở comment nếu Node.js bắt buộc token
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString(json)) // Dùng PATCH khớp với Node.js
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

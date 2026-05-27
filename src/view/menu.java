@@ -327,10 +327,14 @@ public class menu extends JFrame {
                     maxChartValue = 100; // Reset mức tối thiểu
                     
                     for (int i = 0; i < 7; i++) {
-                        chartLabels[i] = labelsArr.getString(i);
-                        chartData[i] = dataArr.getInt(i);
-                        if (chartData[i] > maxChartValue) maxChartValue = chartData[i]; // Tìm số lớn nhất để scale chiều cao
+                    chartLabels[i] = labelsArr.getString(i);
+                    try {
+                        chartData[i] = (int) Double.parseDouble(dataArr.get(i).toString());
+                    } catch (Exception e) {
+                        chartData[i] = 0; 
                     }
+                    if (chartData[i] > maxChartValue) maxChartValue = chartData[i]; 
+                }
 
                     // Cập nhật UI trên Main Thread
                     SwingUtilities.invokeLater(() -> {
@@ -349,7 +353,18 @@ public class menu extends JFrame {
                             JSONObject o = ordersArr.getJSONObject(i);
                             String id = "#" + o.getInt("id");
                             String cus = o.getString("customer");
-                            String total = formatter.format(o.optDouble("total_amount", 0)) + " đ";
+
+                            double rawTotal = 0;
+                            if (o.has("total_amount") && !o.isNull("total_amount")) {
+                                try {
+                                    rawTotal = Double.parseDouble(o.get("total_amount").toString());
+                                } catch (Exception ex) {
+                                    System.out.println("Lỗi ép kiểu tiền: " + ex.getMessage());
+                                }
+                            }
+                            String total = formatter.format(rawTotal) + " đ";
+                            // 🔥 KẾT THÚC ĐOẠN FIX 🔥
+
                             String status = o.getString("status");
                             recentOrdersModel.addRow(new Object[]{id, cus, total, status});
                         }

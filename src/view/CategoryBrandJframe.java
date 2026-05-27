@@ -34,6 +34,9 @@ public class CategoryBrandJframe extends JPanel{
         BannerJframe bannerTab = new BannerJframe();
         tabbedPane.addTab(" Banner ", new ImageIcon(), bannerTab);
         // 4. Style cho JTabbedPane (Tùy chỉnh để tiệp màu với UI của ông)
+        
+        VoucherJframe voucherTab = new VoucherJframe();
+        tabbedPane.addTab(" voucher ", new ImageIcon(), voucherTab);
         tabbedPane.setBackground(Color.WHITE);
         
         add(tabbedPane, BorderLayout.CENTER);
