@@ -5,7 +5,6 @@
 package view;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumnModel;
@@ -19,12 +18,13 @@ import java.util.Date;
 import khongphaigiaodien.StatsApi;
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 /**
  *
  * @author AlinV
  */
-public class RevenueJFrame extends JPanel{
-   private JTable table;
+public class RevenueJFrame extends JPanel {
+    private JTable table;
     private DefaultTableModel model;
     private JTextField txtFromDate;
     private JTextField txtToDate;
@@ -250,48 +250,130 @@ public class RevenueJFrame extends JPanel{
         StringBuilder dataToAi = new StringBuilder();
         for(int i = 0; i < table.getRowCount(); i++) {
             dataToAi.append("- ").append(table.getValueAt(i, 1))
-                    .append(" (Bán ra: ").append(table.getValueAt(i, 3))
+                    .append(" (Bán: ").append(table.getValueAt(i, 3))
                     .append(", Lãi: ").append(table.getValueAt(i, 5)).append(")\n");
         }
 
-        JDialog loadingDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "Vui lòng đợi", true);
-        loadingDialog.setLayout(new BorderLayout(10, 10));
-        loadingDialog.setSize(350, 120);
-        loadingDialog.setLocationRelativeTo(this);
-        // KHÓA NÚT X (Buộc phải đợi AI chạy xong)
-        loadingDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE); 
-        
-        JPanel pnlLoad = new JPanel(new BorderLayout(15, 15));
-        pnlLoad.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        pnlLoad.setBackground(Color.WHITE);
+        double dRev = Double.parseDouble(revStr);
+        double dCost = Double.parseDouble(lblTotalCost.getText().replaceAll("[^0-9]", ""));
+        double dVat = Double.parseDouble(lblTotalVat.getText().replaceAll("[^0-9]", ""));
+        double dProfit = dRev - dCost - dVat;
 
-        JLabel lblMsg = new JLabel("🤖 Giám đốc AI đang đọc báo cáo...", SwingConstants.CENTER);
-        lblMsg.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        
-        JProgressBar progressBar = new JProgressBar();
-        progressBar.setIndeterminate(true); 
-        progressBar.setForeground(new Color(102, 0, 153)); // Màu tím tone-sur-tone với cái nút
-        progressBar.setBackground(new Color(240, 240, 240));
-        
-        pnlLoad.add(lblMsg, BorderLayout.NORTH);
-        pnlLoad.add(progressBar, BorderLayout.CENTER);
-        loadingDialog.add(pnlLoad);
+        // 1. TẠO DASHBOARD CHÍNH
+        JDialog dashboardDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "📊 Dashboard AI Phân Tích Chiến Lược", true);
+        dashboardDialog.setSize(950, 480);
+        dashboardDialog.setLocationRelativeTo(this);
+        dashboardDialog.setLayout(new BorderLayout());
 
+        // --- BÊN TRÁI: BIỂU ĐỒ TRÒN TỰ VẼ (BẢN PRO MAX) ---
+        JPanel chartPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                double profitObj = Math.max(0, dProfit);
+                double costObj = dCost + dVat;
+                double total = profitObj + costObj;
+                if (total == 0) return;
+
+                int profitAngle = (int) Math.round((profitObj / total) * 360);
+                int costAngle = 360 - profitAngle;
+
+                int x = 60, y = 30, size = 220;
+                int holeSize = 130; 
+                int offset = (size - holeSize) / 2;
+
+                Color colorProfit = new Color(16, 185, 129); 
+                Color colorCost = new Color(239, 68, 68);    
+                Color colorBg = new Color(248, 249, 250);    
+
+                g2d.setColor(colorProfit);
+                g2d.fillArc(x, y, size, size, 90, profitAngle);
+
+                g2d.setColor(colorCost);
+                g2d.fillArc(x, y, size, size, 90 + profitAngle, costAngle);
+
+                g2d.setColor(colorBg);
+                g2d.fillOval(x + offset, y + offset, holeSize, holeSize);
+
+                g2d.setColor(Color.GRAY);
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                String titleCenter = "Tổng Dòng Tiền";
+                FontMetrics fm = g2d.getFontMetrics();
+                g2d.drawString(titleCenter, x + size/2 - fm.stringWidth(titleCenter)/2, y + size/2 - 10);
+
+                g2d.setColor(new Color(0, 80, 160));
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                String moneyCenter = String.format("%,.0fđ", total);
+                fm = g2d.getFontMetrics();
+                g2d.drawString(moneyCenter, x + size/2 - fm.stringWidth(moneyCenter)/2, y + size/2 + 15);
+
+                double profitPct = (profitObj / total) * 100;
+                double costPct = 100 - profitPct;
+
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                int legY = 290;
+
+                g2d.setColor(colorProfit);
+                g2d.fillRoundRect(50, legY, 16, 16, 4, 4);
+                g2d.setColor(Color.DARK_GRAY);
+                g2d.drawString(String.format("Lợi nhuận: %.1f%%", profitPct), 75, legY + 13);
+
+                g2d.setColor(colorCost);
+                g2d.fillRoundRect(50, legY + 30, 16, 16, 4, 4);
+                g2d.setColor(Color.DARK_GRAY);
+                g2d.drawString(String.format("Vốn & VAT: %.1f%%", costPct), 75, legY + 43);
+            }
+        };
+        chartPanel.setPreferredSize(new Dimension(350, 480));
+        chartPanel.setBackground(new Color(248, 249, 250));
+        dashboardDialog.add(chartPanel, BorderLayout.WEST);
+
+        // --- BÊN PHẢI: KHUNG CHỨA TEXT AI ---
+        String loadingHtml = "<html><body style='font-family:Segoe UI; padding:60px 20px; text-align:center;'>"
+                + "<img src='https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/images/loading.gif' width='50' height='50'>"
+                + "<h3 style='color:#00509E; margin-top: 20px;'>🤖 Giám đốc AI đang tính toán...</h3>"
+                + "<p style='color:#666; font-size:12px;'>Việc phân tích dữ liệu lớn có thể mất từ 5 - 10 giây.<br>Vui lòng không đóng cửa sổ này!</p>"
+                + "</body></html>";
+
+        JEditorPane aiTextPane = new JEditorPane("text/html", loadingHtml);
+        aiTextPane.setEditable(false);
+        aiTextPane.setBackground(Color.WHITE);
+        dashboardDialog.add(new JScrollPane(aiTextPane), BorderLayout.CENTER);
+
+        JButton btnClose = new JButton("Đóng Báo Cáo");
+        btnClose.setBackground(new Color(220, 53, 69));
+        btnClose.setForeground(Color.WHITE);
+        btnClose.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnClose.addActionListener(e -> dashboardDialog.dispose());
+        JPanel pnlBottom = new JPanel();
+        pnlBottom.add(btnClose);
+        dashboardDialog.add(pnlBottom, BorderLayout.SOUTH);
+
+        // 2. GỌI API CHẠY NGẦM
         new Thread(() -> {
             try {
-                java.net.URL url = new java.net.URL("https://linhlinhstore.onrender.com/api/ai/analyze-finance");
+                java.net.URL url = new java.net.URL(khongphaigiaodien.ApiConfig.BASE_URL + "/ai/analyze-finance");
                 java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setDoOutput(true);
 
                 JSONObject body = new JSONObject();
-                body.put("totalRevenue", lblTotalMoney.getText());
-                body.put("totalImportCost", lblTotalCost.getText());
-                body.put("totalVatPaid", lblTotalVat.getText());
-                body.put("profit", lblProfit.getText());
+                
+                // FIX: SẠCH HÓA DỮ LIỆU ĐẦU VÀO ĐỂ AI KHÔNG BỊ "NGÁO"
+                String cleanRevenue = lblTotalMoney.getText().replaceAll("[^0-9]", "");
+                String cleanCost = lblTotalCost.getText().replaceAll("[^0-9]", "");
+                String cleanVat = lblTotalVat.getText().replaceAll("[^0-9]", "");
+                String cleanProfit = lblProfit.getText().replaceAll("[^-0-9]", ""); // Giữ lại dấu trừ cho lợi nhuận nếu lỗ
+
+                body.put("totalRevenue", cleanRevenue);
+                body.put("totalImportCost", cleanCost);
+                body.put("totalVatPaid", cleanVat);
+                body.put("profit", cleanProfit);
                 body.put("soldData", dataToAi.toString());
-                body.put("importData", "Dữ liệu nhập đã tính gộp trong Vốn."); 
 
                 try (java.io.OutputStream os = conn.getOutputStream()) {
                     os.write(body.toString().getBytes("utf-8"));
@@ -305,38 +387,54 @@ public class RevenueJFrame extends JPanel{
                     
                     String rawAdvice = new JSONObject(res.toString()).getString("advice");
                     
-                    // Dịch Markdown sang HTML
-                    String htmlAdvice = rawAdvice
-                            .replaceAll("\\*\\*(.*?)\\*\\*", "<b style='color:#00509E;'>$1</b>")
-                            .replaceAll("\\* (.*?)\n", "<li style='margin-bottom:8px;'>$1</li>")
-                            .replaceAll("\n", "<br>");
+                    // LỘT XÁC GIAO DIỆN HIỂN THỊ THÀNH CARD UI
+                    String finalHtml = "";
+                    try {
+                        // Cố gắng parse theo 3 phần để render giao diện Card xịn xò
+                        if (rawAdvice.contains("- Phần 2") && rawAdvice.contains("- Phần 3")) {
+                            finalHtml = "<html><body style='font-family:Segoe UI, sans-serif; font-size:13px; color:#333; margin: 0; padding: 10px;'>"
+                                    + "<h2 style='color:#00509E; text-align:center; margin-top:0;'>💡 CHIẾN LƯỢC KINH DOANH TỪ AI</h2>"
+                                    + "<table width='100%' cellpadding='8' cellspacing='0' border='0' style='margin-bottom:10px;'>"
+                                    + "<tr><td style='background-color:#E8F4F8; border-left: 4px solid #00509E;'>"
+                                    + "<b style='color:#00509E; font-size:14px;'>1. HIỆU QUẢ BÁN HÀNG</b><br>"
+                                    + rawAdvice.split("- Phần 2")[0].replace("- Phần 1", "").replace(":", "").trim()
+                                    + "</td></tr></table>"
+                                    
+                                    + "<table width='100%' cellpadding='8' cellspacing='0' border='0' style='margin-bottom:10px;'>"
+                                    + "<tr><td style='background-color:#FFF3CD; border-left: 4px solid #FFC107;'>"
+                                    + "<b style='color:#856404; font-size:14px;'>2. CHIẾN LƯỢC ĐỊNH GIÁ & TỒN KHO</b><br>"
+                                    + rawAdvice.split("- Phần 3")[0].split("- Phần 2")[1].replace(":", "").trim()
+                                    + "</td></tr></table>"
+                                    
+                                    + "<table width='100%' cellpadding='8' cellspacing='0' border='0'>"
+                                    + "<tr><td style='background-color:#F8D7DA; border-left: 4px solid #DC3545;'>"
+                                    + "<b style='color:#721C24; font-size:14px;'>3. ĐỀ XUẤT HÀNH ĐỘNG TỨC THỜI</b><br>"
+                                    + rawAdvice.split("- Phần 3")[1].replace(":", "").trim()
+                                    + "</td></tr></table>"
+                                    + "</body></html>";
+                        } else {
+                            // Fallback nếu AI trả lời tự do
+                            finalHtml = "<html><body style='font-family:Segoe UI; font-size:14px; padding:20px; color:#333;'>"
+                                     + "<h2 style='color:#00509E; border-bottom: 2px solid #ccc; padding-bottom: 5px;'>💡 CHIẾN LƯỢC KINH DOANH TỪ AI:</h2>"
+                                     + rawAdvice
+                                     + "</body></html>";
+                        }
+                    } catch (Exception parseEx) {
+                        // Fallback an toàn tuyệt đối
+                        finalHtml = "<html><body style='padding:20px; font-family:Segoe UI;'>" + rawAdvice + "</body></html>";
+                    }
 
-                    String finalHtml = "<html><body style='font-family:Segoe UI; font-size:14px; padding:15px; color:#333333;'>" 
-                                     + htmlAdvice + "</body></html>";
-
-                    SwingUtilities.invokeLater(() -> {
-                        loadingDialog.dispose();
-                        
-                        JEditorPane editorPane = new JEditorPane("text/html", finalHtml);
-                        editorPane.setEditable(false);
-                        editorPane.setBackground(new Color(245, 248, 250)); 
-                        
-                        JScrollPane pane = new JScrollPane(editorPane);
-                        pane.setPreferredSize(new Dimension(700, 450));
-                        pane.setBorder(BorderFactory.createEmptyBorder());
-                        
-                        JOptionPane.showMessageDialog(this, pane, "Đang Phân Tích Tài Chính", JOptionPane.INFORMATION_MESSAGE);
-                    });
+                    final String renderHtml = finalHtml;
+                    SwingUtilities.invokeLater(() -> aiTextPane.setText(renderHtml));
                 }
             } catch (Exception e) { 
-                SwingUtilities.invokeLater(() -> {
-                    loadingDialog.dispose(); // Lỗi cũng phải tắt form loading
-                    JOptionPane.showMessageDialog(this, "Lỗi kết nối AI: " + e.getMessage());
-                });
+                SwingUtilities.invokeLater(() -> aiTextPane.setText("<html><body style='padding:20px;'><h3 style='color:red;'>Lỗi kết nối AI: " + e.getMessage() + "</h3></body></html>"));
             }
         }).start();
-        loadingDialog.setVisible(true); 
+
+        dashboardDialog.setVisible(true); 
     }
+
     private String getTodayDate() {
         return new SimpleDateFormat("yyyy-MM-dd").format(new Date());
     }
