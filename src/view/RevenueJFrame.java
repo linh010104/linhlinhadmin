@@ -260,7 +260,7 @@ public class RevenueJFrame extends JPanel {
         double dProfit = dRev - dCost - dVat;
 
         // 1. TẠO DASHBOARD CHÍNH
-        JDialog dashboardDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "📊 Dashboard AI Phân Tích Chiến Lược", true);
+        JDialog dashboardDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), " Dashboard AI Phân Tích ", true);
         dashboardDialog.setSize(950, 480);
         dashboardDialog.setLocationRelativeTo(this);
         dashboardDialog.setLayout(new BorderLayout());

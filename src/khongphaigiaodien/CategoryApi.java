@@ -22,7 +22,6 @@ import org.json.JSONObject;
 public class CategoryApi {
     private static final String BASE_URL = ApiConfig.BASE_URL +"/categories";
 
-    // --- HÀM QUAN TRỌNG: Để file ProductJframe.java hết báo lỗi ---
     public static List<CategoryDTO> getAllCategories() {
         List<CategoryDTO> list = new ArrayList<>();
         try {
@@ -39,7 +38,6 @@ public class CategoryApi {
         return list;
     }
 
-    // Lấy dữ liệu thô (Raw) cho bảng Danh mục
     public static String getAllRaw() {
         try {
             HttpClient client = HttpClient.newHttpClient();
@@ -48,12 +46,10 @@ public class CategoryApi {
         } catch (Exception e) { return "[]"; }
     }
 
-    // Hỗ trợ tạo danh mục (Bản cũ 2 tham số - giúp các file khác ko lỗi)
     public static boolean create(String name, String desc) {
         return create(name, desc, null);
     }
 
-    // Hỗ trợ tạo danh mục (Bản mới 3 tham số - có Parent ID)
     public static boolean create(String name, String desc, Integer parentId) {
         try {
             JSONObject obj = new JSONObject();
@@ -70,12 +66,10 @@ public class CategoryApi {
         } catch (Exception e) { return false; }
     }
 
-    // Hỗ trợ cập nhật (Bản cũ 3 tham số)
     public static boolean update(int id, String name, String desc) {
         return update(id, name, desc, null);
     }
 
-    // Hỗ trợ cập nhật (Bản mới 4 tham số)
     public static boolean update(int id, String name, String desc, Integer parentId) {
         try {
             JSONObject obj = new JSONObject();
@@ -92,13 +86,35 @@ public class CategoryApi {
         } catch (Exception e) { return false; }
     }
 
-    public static boolean delete(int id) {
+    // 🔥 HÀM MỚI ĐÃ SỬA ĐỔI ĐỂ LẤY CÂU CHỬI TỪ NODE.JS
+    public static String delete(int id) {
         try {
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(BASE_URL + "/" + id))
                     .header("Authorization", "Bearer " + AuthSession.token)
                     .DELETE().build();
-            return HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString()).statusCode() == 200;
-        } catch (Exception e) { return false; }
+            
+            HttpResponse<String> res = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
+            
+            // Ép nó vào định dạng JSON tự chế để nhả lên Giao diện đọc
+            JSONObject result = new JSONObject();
+            result.put("statusCode", res.statusCode());
+            
+            if (res.statusCode() == 200) {
+                result.put("success", true);
+            } else {
+                result.put("success", false);
+                // Cố gắng bóc tách câu lỗi do Node.js trả về
+                try {
+                    JSONObject errObj = new JSONObject(res.body());
+                    result.put("message", errObj.optString("message", "Lỗi không xác định từ Server!"));
+                } catch(Exception parseEx) {
+                    result.put("message", "Lỗi Server (Mã: " + res.statusCode() + ")");
+                }
+            }
+            return result.toString();
+        } catch (Exception e) { 
+            return "{\"success\":false, \"message\":\"Lỗi mất kết nối mạng!\"}"; 
+        }
     }
 }

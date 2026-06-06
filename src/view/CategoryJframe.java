@@ -1,4 +1,4 @@
-    /*
+/*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
@@ -12,6 +12,7 @@ import java.awt.*;
 import khongphaigiaodien.CategoryApi;
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 /**
  *
  * @author AlinV
@@ -50,12 +51,25 @@ public class CategoryJframe extends JPanel{
 
         JButton btnDelete = new JButton("Xóa");
         styleButton(btnDelete, new Color(220, 53, 69));
+        
+        // 🔥 ĐÃ SỬA CÚ PHÁP ĐỌC JSON ĐỂ BẬT POPUP LỖI
         btnDelete.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row == -1) return;
             int id = (int) model.getValueAt(row, 0);
+            
             if (JOptionPane.showConfirmDialog(this, "Xác nhận xóa danh mục này?", "Xác nhận", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-                if (CategoryApi.delete(id)) loadCategories();
+                String responseStr = CategoryApi.delete(id);
+                JSONObject responseObj = new JSONObject(responseStr);
+                
+                if (responseObj.getBoolean("success")) {
+                    JOptionPane.showMessageDialog(this, "Xóa danh mục thành công!");
+                    loadCategories();
+                } else {
+                    // Nếu lỗi (400, 403, 500) thì bật popup cảnh báo lên
+                    String errorMsg = responseObj.optString("message", "Lỗi không xác định");
+                    JOptionPane.showMessageDialog(this, errorMsg, "Cảnh báo Xóa", JOptionPane.WARNING_MESSAGE);
+                }
             }
         });
 
