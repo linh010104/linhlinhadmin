@@ -42,27 +42,25 @@ public class ProductApi {
     ) {
         try {
             HttpClient client = HttpClient.newHttpClient();
-            String json = """
-            {
-              "name": "%s",
-              "sku": "%s",
-              "price": %.2f,
-              "import_price": %.2f,
-              "stock_quantity": %d,
-              "warranty_month": %d,
-              "category_id": %d,
-              "description": "%s",
-              "specifications": "%s",
-              "brand_id": %d,
-              "status": %d
-            }
-            """.formatted(name, sku, price, importPrice, stockQuantity, warranty, categoryId, description, specifications, brandId, status);
+            
+            org.json.JSONObject jsonObj = new org.json.JSONObject();
+            jsonObj.put("name", name);
+            jsonObj.put("sku", sku);
+            jsonObj.put("price", price);
+            jsonObj.put("import_price", importPrice);
+            jsonObj.put("stock_quantity", stockQuantity);
+            jsonObj.put("warranty_month", warranty);
+            jsonObj.put("category_id", categoryId);
+            jsonObj.put("description", description);
+            jsonObj.put("specifications", specifications);
+            jsonObj.put("brand_id", brandId);
+            jsonObj.put("status", status);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(ApiConfig.BASE_URL + "/products"))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + adminlienketweb.AuthSession.token)
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonObj.toString()))
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -78,27 +76,26 @@ public class ProductApi {
             int warranty, int categoryId, String description, String specifications, int brandId, int status) {
         try {
             HttpClient client = HttpClient.newHttpClient();
-            String json = """
-            {
-              "name": "%s",
-              "sku": "%s",
-              "price": %.2f,
-              "import_price": %.2f,
-              "stock_quantity": %d,
-              "warranty_month": %d,
-              "category_id": %d,
-              "description": "%s",
-              "specifications": "%s",
-              "brand_id": %d,
-              "status": %d
-            }
-            """.formatted(name, sku, price, importPrice, stockQuantity, warranty, categoryId, description, specifications, brandId, status);
+            
+            // 🔥 DÙNG JSONObject THAY VÌ CỘNG CHUỖI THỦ CÔNG
+            org.json.JSONObject jsonObj = new org.json.JSONObject();
+            jsonObj.put("name", name);
+            jsonObj.put("sku", sku);
+            jsonObj.put("price", price);
+            jsonObj.put("import_price", importPrice);
+            jsonObj.put("stock_quantity", stockQuantity);
+            jsonObj.put("warranty_month", warranty);
+            jsonObj.put("category_id", categoryId);
+            jsonObj.put("description", description);
+            jsonObj.put("specifications", specifications);
+            jsonObj.put("brand_id", brandId);
+            jsonObj.put("status", status);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(ApiConfig.BASE_URL + "/products/" + id))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + adminlienketweb.AuthSession.token)
-                    .PUT(HttpRequest.BodyPublishers.ofString(json))
+                    .PUT(HttpRequest.BodyPublishers.ofString(jsonObj.toString()))
                     .build();
 
             return client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() == 200;

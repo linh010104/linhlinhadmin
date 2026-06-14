@@ -99,37 +99,128 @@ public class ProductJframe extends JPanel{
     }
 
     private void showAddDialog() {
+       JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "✨ Thêm Sản Phẩm Mới", true);
+        dialog.setSize(850, 600);
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        // --- KHUNG TRÊN: Các ô nhập ngắn (GridLayout 2 cột) ---
+        JPanel topForm = new JPanel(new GridLayout(0, 2, 10, 15)); 
+        
         JTextField txtName = new JTextField();
         JTextField txtSku = new JTextField();
         JTextField txtPrice = new JTextField("0");
         JTextField txtImportPrice = new JTextField("0");
         JTextField txtStock = new JTextField("0");
         JTextField txtWarranty = new JTextField("0");
-        JTextField txtSpecs = new JTextField();
-        JTextField txtDesc = new JTextField();
+        
+        JTextField[] textFields = {txtName, txtSku, txtPrice, txtImportPrice, txtStock, txtWarranty};
+        for (JTextField tf : textFields) {
+            tf.setPreferredSize(new Dimension(tf.getWidth(), 35));
+            tf.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        }
         
         JComboBox<CategoryDTO> cbCategory = new JComboBox<>();
-        for (CategoryDTO c : CategoryApi.getAllCategories()) cbCategory.addItem(c);
-        
-        Object[] form = { 
-            "Tên:", txtName, "SKU:", txtSku, "Giá bán (Gốc):", txtPrice, 
-            "Giá nhập:", txtImportPrice, "Tồn kho tổng:", txtStock,
-            "Bảo hành (tháng):", txtWarranty, "Thông số kỹ thuật:", txtSpecs, 
-            "Ghi chú:", txtDesc, "Danh mục:", cbCategory 
-        };
-        
-        if (JOptionPane.showConfirmDialog(this, form, "Thêm sản phẩm mới", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
-            CategoryDTO cat = (CategoryDTO) cbCategory.getSelectedItem();
-            boolean ok = ProductApi.createProduct(
-                txtName.getText(), txtSku.getText(), Double.parseDouble(txtPrice.getText()), 
-                Double.parseDouble(txtImportPrice.getText()), Integer.parseInt(txtStock.getText()), 
-                Integer.parseInt(txtWarranty.getText()), cat.getId(), txtDesc.getText(), txtSpecs.getText(), 1, 1
-            );
-            if (ok) {
-                JOptionPane.showMessageDialog(this, "Thêm thành công! Hãy bấm 'Chi tiết' để thêm Ảnh & Phiên bản.");
-                loadProducts();
-            }
+        cbCategory.setPreferredSize(new Dimension(cbCategory.getWidth(), 35));
+        cbCategory.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        for (CategoryDTO c : CategoryApi.getAllCategories()) {
+            cbCategory.addItem(c);
         }
+
+        topForm.add(new JLabel("Tên sản phẩm * :")); topForm.add(txtName);
+        topForm.add(new JLabel("Mã SKU:")); topForm.add(txtSku);
+        topForm.add(new JLabel("Giá bán (VNĐ) * :")); topForm.add(txtPrice);
+        topForm.add(new JLabel("Giá nhập (VNĐ):")); topForm.add(txtImportPrice);
+        topForm.add(new JLabel("Tồn kho tổng:")); topForm.add(txtStock);
+        topForm.add(new JLabel("Bảo hành (Tháng):")); topForm.add(txtWarranty);
+        topForm.add(new JLabel("Danh mục:")); topForm.add(cbCategory);
+
+        // --- KHUNG DƯỚI: Các ô nhập văn bản dài (BoxLayout) ---
+        JPanel bottomForm = new JPanel();
+        bottomForm.setLayout(new BoxLayout(bottomForm, BoxLayout.Y_AXIS));
+        bottomForm.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
+
+        JLabel lblSpecs = new JLabel("Thông số kỹ thuật:");
+        lblSpecs.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Dùng JTextArea tự động xuống dòng cực xịn
+        JTextArea txtSpecs = new JTextArea();
+        txtSpecs.setLineWrap(true);
+        txtSpecs.setWrapStyleWord(true);
+        txtSpecs.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JScrollPane scrollSpecs = new JScrollPane(txtSpecs);
+        scrollSpecs.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scrollSpecs.setPreferredSize(new Dimension(400, 100));
+
+        JLabel lblDesc = new JLabel("Mô tả / Ghi chú:");
+        lblDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblDesc.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        
+        JTextArea txtDesc = new JTextArea();
+        txtDesc.setLineWrap(true);
+        txtDesc.setWrapStyleWord(true);
+        txtDesc.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JScrollPane scrollDesc = new JScrollPane(txtDesc);
+        scrollDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scrollDesc.setPreferredSize(new Dimension(400, 100));
+
+        bottomForm.add(lblSpecs);
+        bottomForm.add(Box.createVerticalStrut(5));
+        bottomForm.add(scrollSpecs);
+        bottomForm.add(lblDesc);
+        bottomForm.add(Box.createVerticalStrut(5));
+        bottomForm.add(scrollDesc);
+
+        // Gộp Khung trên và Khung dưới
+        JPanel mainFormPanel = new JPanel(new BorderLayout());
+        mainFormPanel.add(topForm, BorderLayout.NORTH);
+        mainFormPanel.add(bottomForm, BorderLayout.CENTER);
+
+        // --- KHUNG NÚT BẤM (Hủy / Lưu) ---
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        
+        JButton btnCancel = new JButton("❌ Hủy Bỏ");
+        styleButton(btnCancel, new Color(108, 117, 125));
+        btnCancel.addActionListener(e -> dialog.dispose()); // Đóng form
+        
+        JButton btnSave = new JButton("💾 Thêm Mới Sản Phẩm");
+        styleButton(btnSave, new Color(0, 153, 76));
+        btnSave.addActionListener(e -> {
+            if (txtName.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Tên sản phẩm không được để trống!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            try {
+                CategoryDTO cat = (CategoryDTO) cbCategory.getSelectedItem();
+                boolean ok = ProductApi.createProduct(
+                    txtName.getText(), txtSku.getText(), Double.parseDouble(txtPrice.getText()), 
+                    Double.parseDouble(txtImportPrice.getText()), Integer.parseInt(txtStock.getText()), 
+                    Integer.parseInt(txtWarranty.getText()), cat.getId(), txtDesc.getText(), txtSpecs.getText(), 1, 1
+                );
+                
+                if (ok) {
+                    JOptionPane.showMessageDialog(dialog, "Thêm thành công! Hãy bấm 'Chi tiết' để thêm Ảnh & Phiên bản.");
+                    dialog.dispose(); // Đóng form
+                    loadProducts();   // Load lại bảng
+                } else {
+                    JOptionPane.showMessageDialog(dialog, "Có lỗi xảy ra khi thêm sản phẩm!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đúng định dạng số cho Giá, Kho và Bảo hành!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        btnPanel.add(btnCancel);
+        btnPanel.add(btnSave);
+        
+        panel.add(new JScrollPane(mainFormPanel), BorderLayout.CENTER);
+        panel.add(btnPanel, BorderLayout.SOUTH);
+        
+        dialog.add(panel);
+        dialog.setVisible(true);
     }
 
     // =========================================================================
@@ -264,6 +355,8 @@ public class ProductJframe extends JPanel{
         styleButton(btnSave, new Color(0, 102, 204));
         btnSave.addActionListener(e -> {
             CategoryDTO cat = (CategoryDTO) cbCategory.getSelectedItem();
+            String safeDesc = txtDesc.getText().replace("\n", "\\n").replace("\r", "");
+            String safeSpecs = txtSpecs.getText().replace("\n", "\\n").replace("\r", "");
             boolean ok = ProductApi.updateProduct(
                 productId, txtName.getText(), txtSku.getText(), Double.parseDouble(txtPrice.getText()), 
                 Double.parseDouble(txtImportPrice.getText()), Integer.parseInt(txtStock.getText()), 
