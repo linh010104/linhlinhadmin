@@ -27,12 +27,12 @@ import org.json.JSONObject;
 public class ProductJframe extends JPanel{
     private JTable table; 
     private DefaultTableModel model;
+    private String fullProductJson;
 
     public ProductJframe() {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
         
-        // --- THANH CÔNG CỤ TRÊN CÙNG ---
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         topPanel.setBackground(Color.WHITE);
         
@@ -41,60 +41,77 @@ public class ProductJframe extends JPanel{
         btnAdd.addActionListener(e -> showAddDialog());
         topPanel.add(btnAdd);
 
+        // --- TÌM KIẾM ---
+        topPanel.add(new JLabel("  |  Tìm kiếm sản phẩm:"));
+        JTextField txtSearch = new JTextField(20);
+        txtSearch.setPreferredSize(new Dimension(150, 30));
+        topPanel.add(txtSearch);
+
+        JButton btnSearch = new JButton("Tìm kiếm");
+        styleButton(btnSearch, new Color(0, 123, 255));
+        btnSearch.addActionListener(e -> filterProducts(txtSearch.getText().trim().toLowerCase()));
+        topPanel.add(btnSearch);
+
+        JButton btnReset = new JButton("Reset");
+        styleButton(btnReset, Color.GRAY);
+        btnReset.addActionListener(e -> { txtSearch.setText(""); loadProducts(); });
+        topPanel.add(btnReset);
+
         add(topPanel, BorderLayout.NORTH);
 
-        // --- BẢNG SẢN PHẨM RÚT GỌN ---
-        model = new DefaultTableModel() {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
-        // Thêm cột Hành động vào cuối
-        model.setColumnIdentifiers(new String[]{ 
-            "ID", "Tên Sản Phẩm", "SKU", "Giá Bán", "Tồn Kho", "Trạng Thái", "HÀNH ĐỘNG" 
-        });
+        model = new DefaultTableModel();
+        model.setColumnIdentifiers(new String[]{ "ID", "Tên Sản Phẩm", "SKU", "Giá Bán", "Tồn Kho", "Trạng Thái", "HÀNH ĐỘNG" });
 
         table = new JTable(model);
         styleTable(table);
         
-        // Xử lý sự kiện click vào cột "HÀNH ĐỘNG"
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
-                int col = table.columnAtPoint(e.getPoint());
-                // Cột Hành động là cột số 6 (Index = 6)
-                if (col == 6 && row >= 0) {
-                    int productId = (int) model.getValueAt(row, 0);
-                    showProductDetailDialog(productId);
+                if (table.columnAtPoint(e.getPoint()) == 6 && row >= 0) {
+                    showProductDetailDialog((int) model.getValueAt(row, 0));
                 }
             }
         });
 
         JScrollPane masterScrollPane = new JScrollPane(table);
-        masterScrollPane.getViewport().setBackground(Color.WHITE);
-        masterScrollPane.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
         add(masterScrollPane, BorderLayout.CENTER);
         
         loadProducts();
     }
 
     private void loadProducts() {
-        String json = ProductApi.getAllProducts();
-        if (json == null || json.length() < 5) return;
+        fullProductJson = ProductApi.getAllProducts(); 
+        if (fullProductJson == null || fullProductJson.length() < 5) return;
         model.setRowCount(0);
         
-        JSONArray arr = new JSONArray(json); 
+        JSONArray arr = new JSONArray(fullProductJson); 
         for (int i = 0; i < arr.length(); i++) {
             JSONObject p = arr.getJSONObject(i);
             model.addRow(new Object[]{ 
-                p.getInt("id"), 
-                p.optString("name"), 
-                p.optString("sku"), 
+                p.getInt("id"), p.optString("name"), p.optString("sku"), 
                 String.format("%,.0f đ", p.optDouble("price", 0)), 
                 p.optInt("stock_quantity", 0),
-                p.optInt("status") == 1 ? "Đang bán" : "Ẩn",
-                "✏️ Chi tiết / Sửa" // Chữ hiển thị ở cột Hành động
+                p.optInt("status") == 1 ? "Đang bán" : "Ẩn", "✏️ Chi tiết / Sửa" 
             });
+        }
+    }
+    private void filterProducts(String keyword) {
+        if (fullProductJson == null) return;
+        model.setRowCount(0);
+        JSONArray arr = new JSONArray(fullProductJson); 
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject p = arr.getJSONObject(i);
+            if (p.optString("name", "").toLowerCase().contains(keyword) || 
+                p.optString("sku", "").toLowerCase().contains(keyword)) {
+                model.addRow(new Object[]{ 
+                    p.getInt("id"), p.optString("name"), p.optString("sku"), 
+                    String.format("%,.0f đ", p.optDouble("price", 0)), 
+                    p.optInt("stock_quantity", 0),
+                    p.optInt("status") == 1 ? "Đang bán" : "Ẩn", "✏️ Chi tiết / Sửa" 
+                });
+            }
         }
     }
 

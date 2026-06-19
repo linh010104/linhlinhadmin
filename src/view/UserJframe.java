@@ -20,6 +20,7 @@ import java.awt.event.MouseEvent;
 public class UserJframe extends JPanel{
     JTable table;
     DefaultTableModel model;
+    private List<UserDTO> fullUserList;
 
     public UserJframe() {
         setLayout(new BorderLayout());
@@ -33,6 +34,27 @@ public class UserJframe extends JPanel{
 
         btnLock.addActionListener(e -> toggleStatus());
         top.add(btnLock);
+        top.add(new JLabel("  |  Tìm kiếm:"));
+        JTextField txtSearch = new JTextField(20);
+        txtSearch.setPreferredSize(new Dimension(txtSearch.getWidth(), 30));
+        txtSearch.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        top.add(txtSearch);
+
+        JButton btnSearch = new JButton("Tìm kiếm");
+        styleButton(btnSearch, new Color(0, 123, 255));
+        btnSearch.addActionListener(e -> {
+            String keyword = txtSearch.getText().trim().toLowerCase();
+            filterUsers(keyword);
+        });
+        top.add(btnSearch);
+
+        JButton btnReset = new JButton("Làm mới");
+        styleButton(btnReset, Color.GRAY);
+        btnReset.addActionListener(e -> {
+            txtSearch.setText("");
+            loadUsers();
+        });
+        top.add(btnReset);
 
         add(top, BorderLayout.NORTH);
 
@@ -60,12 +82,26 @@ public class UserJframe extends JPanel{
 
     private void loadUsers() {
         model.setRowCount(0);
-        List<UserDTO> list = UserApi.getAll();
-        for (UserDTO u : list) {
+        fullUserList = UserApi.getAll(); // Gán vào đây thì filter mới biết đường mà lọc
+        for (UserDTO u : fullUserList) {
             model.addRow(new Object[]{ u.id, u.username, u.fullName, u.email, u.phone, u.roleName, u.status == 1 ? "Hoạt động" : "Khóa" });
         }
     }
-
+    private void filterUsers(String keyword) {
+        if (fullUserList == null) return;
+        model.setRowCount(0);
+        for (UserDTO u : fullUserList) {
+            // Tìm theo Username, Email, Họ Tên hoặc SĐT
+            if (u.username.toLowerCase().contains(keyword) || 
+                (u.email != null && u.email.toLowerCase().contains(keyword)) ||
+                (u.fullName != null && u.fullName.toLowerCase().contains(keyword)) ||
+                (u.phone != null && u.phone.contains(keyword))) {
+                
+                model.addRow(new Object[]{ u.id, u.username, u.fullName, u.email, u.phone, u.roleName, u.status == 1 ? "Hoạt động" : "Khóa" });
+            }
+        }
+    }
+    
     private void toggleStatus() {
         int row = table.getSelectedRow();
         if (row == -1) { JOptionPane.showMessageDialog(this, "Chọn một tài khoản để thao tác!"); return; }

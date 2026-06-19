@@ -183,14 +183,8 @@ public class ProductApi {
     public static boolean addVariant(int productId, String group, String name, double additionalPrice, int stockQuantity) {
         try {
             HttpClient client = HttpClient.newHttpClient();
-            String json = """
-            {
-              "variant_group": "%s",
-              "variant_name": "%s",
-              "additional_price": %.2f,
-              "stock_quantity": %d
-            }
-            """.formatted(group, name, additionalPrice, stockQuantity);
+            // Cách nối chuỗi truyền thống:
+            String json = "{\"variant_group\":\"" + group + "\", \"variant_name\":\"" + name + "\", \"additional_price\":" + additionalPrice + ", \"stock_quantity\":" + stockQuantity + "}";
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(ApiConfig.BASE_URL + "/products/" + productId + "/variants"))
