@@ -87,7 +87,7 @@ public class RevenueJFrame extends JPanel {
         add(topPanel, BorderLayout.NORTH);
 
         model = new DefaultTableModel(new String[]{
-            "ID", "Tên Sản Phẩm", "Mẫu mã/Thông số", "SL Bán", "Doanh Thu", "Lợi Nhuận", "Loại Hàng", "Thương Hiệu"
+            "ID", "Tên Sản Phẩm", "Mẫu mã/Thông số", "SL Bán", "Doanh Thu", "Lợi Nhuận", "Loại Hàng", "Thương Hiệu", "Tiền Vốn", "Thuế VAT"
         }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -172,22 +172,25 @@ public class RevenueJFrame extends JPanel {
         JSONObject summary = data.getJSONObject("summary");
         lblTotalMoney.setText(String.format("%,.0f đ", summary.getDouble("totalRevenue")));
         lblTotalCost.setText(String.format("- %,.0f đ", summary.getDouble("totalImportCost")));
-        lblTotalVat.setText(String.format("- %,.0f đ", summary.optDouble("totalVatPaid", 0)));
-        lblProfit.setText(String.format("%,.0f đ", summary.optDouble("totalProfit", 0)));
+        lblTotalVat.setText(String.format("- %,.0f đ", summary.getDouble("totalVatPaid"))); 
+        lblProfit.setText(String.format("%,.0f đ", summary.getDouble("totalProfit")));
         lblTotalOrders.setText("Số mặt hàng đã bán: " + summary.getInt("totalProducts"));
 
         JSONArray productStats = data.getJSONArray("product_stats");
         for (int i = 0; i < productStats.length(); i++) {
             JSONObject p = productStats.getJSONObject(i);
+            
             model.addRow(new Object[]{
                 p.getInt("id"),
                 p.getString("name"),
-                p.optString("specifications", "---"),
+                p.optString("specifications", "---"), // TRẢ LẠI THÔNG SỐ VÀO ĐÂY
                 p.getInt("sold_quantity"),
                 String.format("%,.0f đ", p.getDouble("total_revenue")),
                 String.format("%,.0f đ", p.getDouble("total_profit")),
                 p.optString("category_name", "N/A"),
-                p.optString("brand_name", "N/A")
+                p.optString("brand_name", "N/A"),
+                String.format("%,.0f đ", p.getDouble("total_cost")), // Đẩy Tiền Vốn xuống cuối
+                String.format("%,.0f đ", p.getDouble("total_vat"))   // Đẩy Thuế VAT xuống cuối cùng
             });
         }
     }

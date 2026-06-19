@@ -402,15 +402,96 @@ public class ProductJframe extends JPanel{
 
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton btnAddV = new JButton("+ Thêm Phiên Bản"); styleButton(btnAddV, new Color(0, 153, 76));
+        JButton btnEditV = new JButton("✏️ Sửa Phiên Bản"); styleButton(btnEditV, new Color(255, 140, 0)); // Nút Sửa Mới Thêm
         JButton btnDelV = new JButton("- Xóa Đã Chọn"); styleButton(btnDelV, new Color(220, 53, 69));
 
         btnAddV.addActionListener(e -> {
-            JComboBox<String> cbGroup = new JComboBox<>(new String[]{"Màu sắc", "Dung lượng", "Kích thước"});
-            JTextField txtName = new JTextField(); JTextField txtPrice = new JTextField("0"); JTextField txtStock = new JTextField("0");
-            Object[] form = { "Nhóm:", cbGroup, "Tên:", txtName, "Giá cộng thêm:", txtPrice, "Kho:", txtStock };
-            if (JOptionPane.showConfirmDialog(panel, form, "Thêm Phiên Bản", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
-                if (ProductApi.addVariant(productId, cbGroup.getSelectedItem().toString(), txtName.getText(), Double.parseDouble(txtPrice.getText()), Integer.parseInt(txtStock.getText()))) {
-                    JOptionPane.showMessageDialog(panel, "Thêm thành công! Đóng mở lại cửa sổ để cập nhật danh sách."); // Cách nạp lại có thể tối ưu sau
+            String productName = product.optString("name"); 
+            
+            JComboBox<String> cbGroup = new JComboBox<>(new String[]{"Cấu hình", "Màu sắc", "Phân loại", "Loại Switch", "Kích thước"});
+            cbGroup.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            
+            JTextField txtName = new JTextField(); 
+            txtName.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            
+            JTextField txtPrice = new JTextField("0"); 
+            txtPrice.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            
+            // 🔥 KHÓA CỨNG Ô TỒN KHO LẠI 🔥
+            JTextField txtStock = new JTextField("0");
+            txtStock.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            txtStock.setEditable(false);
+            txtStock.setToolTipText("Sử dụng tính năng Nhập kho để ghi Log số lượng");
+
+            Object[] form = { 
+                "<html><b>Sản phẩm:</b> <font color='#00509E'>" + productName + "</font></html>",
+                " ",
+                "Nhóm phân loại:", cbGroup, 
+                "Tên Mẫu mã / Phiên bản:", txtName, 
+                "Giá cộng thêm khi bán ra (VNĐ):", txtPrice, 
+                "<html>Tồn kho ban đầu: <br/><i>(Sử dụng tính năng Nhập kho sau khi tạo để ghi Log)</i></html>", txtStock 
+            };
+            
+            int result = JOptionPane.showConfirmDialog(panel, form, " Khởi Tạo Phiên Bản Mới", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+            
+            if (result == JOptionPane.OK_OPTION) {
+                try {
+                    // Truyền 0 vào stock thay vì lấy từ txtStock để an toàn 100%
+                    if (ProductApi.addVariant(productId, cbGroup.getSelectedItem().toString(), txtName.getText(), Double.parseDouble(txtPrice.getText()), 0)) {
+                        JOptionPane.showMessageDialog(panel, "Thêm thành công! Đóng mở lại cửa sổ để cập nhật danh sách."); 
+                    } else {
+                        JOptionPane.showMessageDialog(panel, " Lỗi khi thêm vào Server!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch(NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(panel, "Vui lòng nhập số hợp lệ cho Giá!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        // 🔥 LOGIC NÚT SỬA PHIÊN BẢN (MỚI THÊM) 🔥
+        btnEditV.addActionListener(e -> {
+            int row = vTable.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(panel, "Vui lòng chọn một phiên bản để sửa!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            int variantId = (int) vModel.getValueAt(row, 0);
+            String currentGroup = vModel.getValueAt(row, 1).toString();
+            String currentName = vModel.getValueAt(row, 2).toString();
+            String currentPrice = vModel.getValueAt(row, 3).toString();
+
+            JComboBox<String> cbGroup = new JComboBox<>(new String[]{"Cấu hình", "Màu sắc", "Phân loại", "Loại Switch", "Kích thước"});
+            cbGroup.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            cbGroup.setSelectedItem(currentGroup);
+
+            JTextField txtName = new JTextField(currentName);
+            txtName.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
+            JTextField txtPrice = new JTextField(currentPrice);
+            txtPrice.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
+            Object[] form = {
+                "Sửa thông tin Phiên bản ID: " + variantId,
+                " ",
+                "Nhóm phân loại:", cbGroup,
+                "Tên Mẫu mã / Phiên bản:", txtName,
+                "Giá cộng thêm khi bán ra (VNĐ):", txtPrice
+            };
+
+            int result = JOptionPane.showConfirmDialog(panel, form, " Sửa Phiên Bản", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+            if (result == JOptionPane.OK_OPTION) {
+                try {
+                    // CHÚ Ý: Cần có một API updateVariant bên Java (Sếp tự viết hàm PUT nhé)
+                    // Tạm thời gọi API giả lập nếu chưa có
+                    if (khongphaigiaodien.ProductApi.updateVariant(variantId, cbGroup.getSelectedItem().toString(), txtName.getText(), Double.parseDouble(txtPrice.getText()))) {
+                         JOptionPane.showMessageDialog(panel, "Cập nhật thành công! Đóng mở lại cửa sổ để tải lại.");
+                    } else {
+                         JOptionPane.showMessageDialog(panel, "Lỗi khi cập nhật trên Server!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch(NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(panel, "Vui lòng nhập số hợp lệ cho Giá!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -424,7 +505,7 @@ public class ProductJframe extends JPanel{
             }
         });
 
-        topPanel.add(btnAddV); topPanel.add(btnDelV);
+        topPanel.add(btnAddV); topPanel.add(btnEditV); topPanel.add(btnDelV);
         panel.add(topPanel, BorderLayout.NORTH);
         panel.add(new JScrollPane(vTable), BorderLayout.CENTER);
         return panel;

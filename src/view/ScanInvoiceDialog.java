@@ -1,25 +1,16 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package view;
 
 import api.CategoryDTO;
 import khongphaigiaodien.CategoryApi;
 import khongphaigiaodien.ProductApi;
-
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
-
-// --- CÁC THƯ VIỆN ĐỂ GỌI API ---
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -27,15 +18,15 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class ScanInvoiceDialog extends JDialog {
 
-    private JButton btnChooseFile;
-    private JButton btnScanAI;
-    private JButton btnSaveDB;
+    private JButton btnChooseFile, btnScanAI, btnSaveDB;
     private JLabel lblFilePath;
     private JTable tableItems;
     private DefaultTableModel tableModel;
@@ -45,18 +36,20 @@ public class ScanInvoiceDialog extends JDialog {
     private double currentTotalAmount = 0;
     private double currentTaxPercent = 10.0;
     private double currentTaxAmount = 0;
+    
+    // Bản đồ lưu ID của Sản phẩm gốc để lát truyền vào Form Mẫu mã
+    private Map<String, Integer> productMap = new HashMap<>();
 
     public ScanInvoiceDialog(JFrame parent) {
         super(parent, "Nhập Kho Bằng Trí Tuệ Nhân Tạo (AI)", true);
         initUI();
-        setSize(950, 600); // Mở rộng form ra một chút cho đẹp
+        setSize(1050, 700);
         setLocationRelativeTo(parent);
     }
 
     private void initUI() {
         setLayout(new BorderLayout(10, 10));
 
-        // 1. PHẦN TRÊN CÙNG
         JPanel panelTop = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
         btnChooseFile = new JButton("1. Chọn Ảnh Hóa Đơn");
         lblFilePath = new JLabel("Chưa chọn file nào...");
@@ -69,27 +62,27 @@ public class ScanInvoiceDialog extends JDialog {
         panelTop.add(lblFilePath);
         add(panelTop, BorderLayout.NORTH);
 
-        // 2. PHẦN GIỮA: BẢNG (THÊM CỘT TRẠNG THÁI)
-        String[] columnNames = {"STT", "Tên Sản Phẩm", "Số Lượng", "Đơn Giá Nhập", "Trạng Thái"};
+        String[] columnNames = {"STT", "Tên SP Gốc", "Mẫu Mã (Variant)", "Số Lượng", "Đơn Giá Nhập", "Trạng Thái"};
         tableModel = new DefaultTableModel(columnNames, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         tableItems = new JTable(tableModel);
         tableItems.setRowHeight(30);
         tableItems.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
 
-        // Tô màu cột Trạng thái cho sinh động
-        tableItems.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+        tableItems.getColumnModel().getColumn(5).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 String status = value != null ? value.toString() : "";
-                if (status.contains("Hàng Mới")) {
+                if (status.contains("SP Mới")) {
                     c.setForeground(Color.RED);
                     c.setFont(c.getFont().deriveFont(Font.BOLD));
+                } else if (status.contains("Tạo Mẫu Mã")) {
+                    c.setForeground(new Color(255, 140, 0)); // Màu cam cho bắt mắt
+                    c.setFont(c.getFont().deriveFont(Font.BOLD));
                 } else if (status.contains("Đã có")) {
-                    c.setForeground(new Color(0, 153, 76)); // Xanh lá
+                    c.setForeground(new Color(0, 153, 76));
                 } else {
                     c.setForeground(Color.BLACK);
                 }
@@ -97,31 +90,37 @@ public class ScanInvoiceDialog extends JDialog {
             }
         });
 
-        // BẮT SỰ KIỆN DOUBLE-CLICK VÀO HÀNG MỚI ĐỂ TẠO SẢN PHẨM
+        // 🎯 XỬ LÝ CLICK ĐÚP: PHÂN LUỒNG MỞ FORM GỐC HAY MỞ FORM MẪU MÃ
         tableItems.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent me) {
                 if (me.getClickCount() == 2) {
                     int row = tableItems.getSelectedRow();
-                    String status = tableItems.getValueAt(row, 4).toString();
+                    String status = tableItems.getValueAt(row, 5).toString();
+                    String tenSp = tableItems.getValueAt(row, 1).toString();
+                    String mauMa = tableItems.getValueAt(row, 2).toString();
                     
-                    if (status.contains("Hàng Mới")) {
-                        String name = tableItems.getValueAt(row, 1).toString();
-                        String qty = tableItems.getValueAt(row, 2).toString();
-                        String price = tableItems.getValueAt(row, 3).toString().replace(",", "");
-                        
-                        // Gọi form tạo nhanh
-                        showQuickAddDialog(name, qty, price, row);
+                    if (status.contains("SP Mới")) {
+                        String giaNhap = tableItems.getValueAt(row, 4).toString().replace(",", "");
+                        showQuickAddDialog(tenSp, giaNhap, row);
+                    } 
+                    else if (status.contains("Tạo Mẫu Mã")) {
+                        // Lấy ID Sản phẩm gốc từ Map để gán mẫu mã vào
+                        Integer prodId = productMap.get(tenSp.toLowerCase().trim());
+                        if (prodId != null) {
+                            showVariantAddDialog(prodId, tenSp, mauMa, row);
+                        } else {
+                            JOptionPane.showMessageDialog(ScanInvoiceDialog.this, "Không tìm thấy ID Sản phẩm gốc!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                        }
                     }
                 }
             }
         });
 
         JScrollPane scrollPane = new JScrollPane(tableItems);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Kết quả bóc tách từ AI (Nhấp đúp vào Hàng Mới để thêm vào DB)")); 
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Kết quả bóc tách từ AI")); 
         add(scrollPane, BorderLayout.CENTER);
 
-        // 3. PHẦN DƯỚI CÙNG
         JPanel panelBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
         btnSaveDB = new JButton("3. Lưu Phiếu Nhập Vào Database");
         btnSaveDB.setBackground(new Color(46, 204, 113));
@@ -129,7 +128,6 @@ public class ScanInvoiceDialog extends JDialog {
         panelBottom.add(btnSaveDB);
         add(panelBottom, BorderLayout.SOUTH);
 
-        // --- CÁC SỰ KIỆN CLICKS ---
         btnChooseFile.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             FileNameExtensionFilter filter = new FileNameExtensionFilter("Hình ảnh", "jpg", "png", "jpeg");
@@ -145,36 +143,209 @@ public class ScanInvoiceDialog extends JDialog {
         btnSaveDB.addActionListener(e -> saveToDatabase());
     }
 
-    // --- LOGIC GỌI AI VÀ ĐỐI CHIẾU SẢN PHẨM CŨ/MỚI ---
+    // 🎯 FORM THÊM NHANH SẢN PHẨM GỐC
+    private void showQuickAddDialog(String defaultName, String defaultImportPrice, int rowIndex) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "✨ Khởi Tạo Nhanh Sản Phẩm Gốc", true);
+        dialog.setSize(850, 600);
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        JPanel topForm = new JPanel(new GridLayout(0, 2, 10, 15)); 
+        JTextField txtName = new JTextField(defaultName); 
+        JTextField txtSku = new JTextField("SKU-AI-" + (System.currentTimeMillis() % 10000)); 
+        JTextField txtPrice = new JTextField(defaultImportPrice); 
+        JTextField txtImportPrice = new JTextField(defaultImportPrice); 
+        JTextField txtStock = new JTextField("0"); 
+        txtStock.setEditable(false); 
+        JTextField txtWarranty = new JTextField("12");
+        
+        JTextField[] textFields = {txtName, txtSku, txtPrice, txtImportPrice, txtStock, txtWarranty};
+        for (JTextField tf : textFields) {
+            tf.setPreferredSize(new Dimension(tf.getWidth(), 35));
+            tf.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        }
+        
+        JComboBox<CategoryDTO> cbCategory = new JComboBox<>();
+        cbCategory.setPreferredSize(new Dimension(cbCategory.getWidth(), 35));
+        cbCategory.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        List<CategoryDTO> listCat = CategoryApi.getAllCategories();
+        if(listCat != null) {
+            for (CategoryDTO c : listCat) cbCategory.addItem(c);
+        }
+
+        topForm.add(new JLabel("Tên sản phẩm gốc * :")); topForm.add(txtName);
+        topForm.add(new JLabel("Mã SKU:")); topForm.add(txtSku);
+        topForm.add(new JLabel("Giá bán dự kiến (VNĐ):")); topForm.add(txtPrice);
+        topForm.add(new JLabel("Giá nhập (VNĐ):")); topForm.add(txtImportPrice);
+        topForm.add(new JLabel("Tồn kho (Tự cộng dồn sau):")); topForm.add(txtStock);
+        topForm.add(new JLabel("Bảo hành (Tháng):")); topForm.add(txtWarranty);
+        topForm.add(new JLabel("Danh mục:")); topForm.add(cbCategory);
+
+        JPanel bottomForm = new JPanel();
+        bottomForm.setLayout(new BoxLayout(bottomForm, BoxLayout.Y_AXIS));
+        bottomForm.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
+
+        JLabel lblSpecs = new JLabel("Thông số kỹ thuật:");
+        lblSpecs.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JTextArea txtSpecs = new JTextArea();
+        txtSpecs.setLineWrap(true); txtSpecs.setWrapStyleWord(true);
+        txtSpecs.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JScrollPane scrollSpecs = new JScrollPane(txtSpecs);
+        scrollSpecs.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scrollSpecs.setPreferredSize(new Dimension(400, 100));
+
+        JLabel lblDesc = new JLabel("Mô tả / Ghi chú:");
+        lblDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblDesc.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        JTextArea txtDesc = new JTextArea();
+        txtDesc.setLineWrap(true); txtDesc.setWrapStyleWord(true);
+        txtDesc.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JScrollPane scrollDesc = new JScrollPane(txtDesc);
+        scrollDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scrollDesc.setPreferredSize(new Dimension(400, 100));
+
+        bottomForm.add(lblSpecs); bottomForm.add(Box.createVerticalStrut(5)); bottomForm.add(scrollSpecs);
+        bottomForm.add(lblDesc); bottomForm.add(Box.createVerticalStrut(5)); bottomForm.add(scrollDesc);
+
+        JPanel mainFormPanel = new JPanel(new BorderLayout());
+        mainFormPanel.add(topForm, BorderLayout.NORTH);
+        mainFormPanel.add(bottomForm, BorderLayout.CENTER);
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton btnCancel = new JButton("❌ Hủy Bỏ");
+        btnCancel.setBackground(new Color(108, 117, 125)); btnCancel.setForeground(Color.WHITE);
+        btnCancel.addActionListener(e -> dialog.dispose()); 
+        
+        JButton btnSave = new JButton("💾 Khởi Tạo Sản Phẩm Gốc");
+        btnSave.setBackground(new Color(0, 153, 76)); btnSave.setForeground(Color.WHITE);
+        
+        btnSave.addActionListener(e -> {
+            if (txtName.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Tên sản phẩm không được để trống!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            try {
+                CategoryDTO cat = (CategoryDTO) cbCategory.getSelectedItem();
+                int catId = cat != null ? cat.getId() : 1;
+                
+                boolean ok = ProductApi.createProduct(
+                    txtName.getText(), txtSku.getText(), Double.parseDouble(txtPrice.getText()), 
+                    Double.parseDouble(txtImportPrice.getText()), 0, 
+                    Integer.parseInt(txtWarranty.getText()), catId, txtDesc.getText(), txtSpecs.getText(), 1, 1
+                );
+                
+                if (ok) {
+                    JOptionPane.showMessageDialog(dialog, "✅ Đã tạo SP Gốc thành công!\nHãy làm mới bảng hoặc tiếp tục tạo mẫu mã nếu cần.");
+                    // Lấy lại danh sách ID mới để gán vào Map
+                    refreshProductMap();
+                    tableModel.setValueAt(txtName.getText(), rowIndex, 1);
+                    
+                    // Nếu dòng này có chứa mẫu mã -> Nhảy sang báo Cam yêu cầu xác nhận mẫu mã
+                    String mauMa = tableItems.getValueAt(rowIndex, 2).toString();
+                    if(!mauMa.isEmpty()){
+                        tableModel.setValueAt("⚡ Click đúp Tạo Mẫu Mã", rowIndex, 5);
+                    } else {
+                        tableModel.setValueAt("✅ Đã có (Sẵn sàng nhập)", rowIndex, 5);
+                    }
+                    dialog.dispose();
+                } else {
+                    JOptionPane.showMessageDialog(dialog, "❌ Lỗi khi thêm sản phẩm vào Server!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập đúng số!", "Lỗi nhập", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        btnPanel.add(btnCancel); btnPanel.add(btnSave);
+        panel.add(new JScrollPane(mainFormPanel), BorderLayout.CENTER);
+        panel.add(btnPanel, BorderLayout.SOUTH);
+        dialog.add(panel);
+        dialog.setVisible(true);
+    }
+
+    // 🎯 FORM THÊM NHANH MẪU MÃ (VARIANT) MỚI TỪ AI
+    private void showVariantAddDialog(int productId, String productName, String variantName, int rowIndex) {
+        JComboBox<String> cbGroup = new JComboBox<>(new String[]{"Cấu hình", "Màu sắc", "Phân loại", "Loại Switch", "Kích thước"});
+        cbGroup.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        JTextField txtVariantName = new JTextField(variantName);
+        txtVariantName.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        JTextField txtPrice = new JTextField("0"); // Mặc định không cộng thêm tiền
+        txtPrice.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        Object[] form = {
+            "<html><b>Sản phẩm:</b> " + productName + "</html>",
+            " ",
+            "Nhóm phân loại:", cbGroup,
+            "Tên Mẫu mã / Phiên bản:", txtVariantName,
+            "Giá cộng thêm khi bán ra (VNĐ):", txtPrice,
+            "<html><i>(Tồn kho sẽ được tự động cộng dồn sau khi Lưu Hóa Đơn)</i></html>"
+        };
+        
+        int result = JOptionPane.showConfirmDialog(this, form, "📦 Xác Nhận & Tạo Mẫu Mã Mới", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                // Gọi API thêm Variant với stock = 0
+                boolean ok = ProductApi.addVariant(
+                    productId, 
+                    cbGroup.getSelectedItem().toString(), 
+                    txtVariantName.getText(), 
+                    Double.parseDouble(txtPrice.getText()), 
+                    0 
+                );
+                
+                if (ok) {
+                    JOptionPane.showMessageDialog(this, "✅ Đã khởi tạo Mẫu mã thành công!");
+                    tableModel.setValueAt(txtVariantName.getText(), rowIndex, 2);
+                    tableModel.setValueAt("✅ Đã có (Sẵn sàng nhập)", rowIndex, 5); // Đổi Xanh lá cây
+                } else {
+                    JOptionPane.showMessageDialog(this, "❌ Lỗi khi thêm Mẫu mã vào Server!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập số hợp lệ cho giá tiền!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    // Hàm load ngầm Map để chứa cặp [Tên SP : ID]
+    private void refreshProductMap() {
+        productMap.clear();
+        String allProductsJson = ProductApi.getAllProducts();
+        if (allProductsJson != null && allProductsJson.length() > 5) {
+            JSONArray allProds = new JSONArray(allProductsJson);
+            for (int i = 0; i < allProds.length(); i++) {
+                JSONObject p = allProds.getJSONObject(i);
+                productMap.put(p.getString("name").toLowerCase().trim(), p.getInt("id"));
+            }
+        }
+    }
+
     private void scanInvoiceWithAI() {
         if (selectedFile == null) return;
-        JOptionPane.showMessageDialog(this, "Đang gửi ảnh sang AI...\nVui lòng đợi vài giây (tùy thuộc vào mạng)...");
         
-        new SwingWorker<Void, Void>() {
+        JDialog loadingDialog = new JDialog(this, "Hệ Thống AI Đang Xử Lý", true);
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setIndeterminate(true); progressBar.setStringPainted(true);
+        progressBar.setString("Google Gemini đang đọc và bóc tách hóa đơn...");
+        loadingDialog.add(progressBar, BorderLayout.CENTER);
+        loadingDialog.setSize(380, 70); loadingDialog.setLocationRelativeTo(this);
+        loadingDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
                 try {
-                    // 1. GỌI API LẤY TOÀN BỘ SẢN PHẨM TRONG DB ĐỂ ĐỐI CHIẾU
-                    String allProductsJson = ProductApi.getAllProducts();
-                    List<String> existingNames = new ArrayList<>();
-                    if (allProductsJson != null && allProductsJson.length() > 5) {
-                        JSONArray allProds = new JSONArray(allProductsJson);
-                        for (int i = 0; i < allProds.length(); i++) {
-                            existingNames.add(allProds.getJSONObject(i).getString("name").toLowerCase().trim());
-                        }
-                    }
+                    refreshProductMap(); // Cập nhật danh sách Gốc mới nhất
 
-                    // 2. GỬI ẢNH CHO AI
-                    HttpClient client = HttpClient.newBuilder()
-                            .connectTimeout(java.time.Duration.ofSeconds(60)) // Đảm bảo Client không bỏ cuộc sớm
-                            .build();
-                            
+                    HttpClient client = HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(60)).build();
                     String boundary = "---JavaHttpClientBoundary" + System.currentTimeMillis();
                     byte[] fileBytes = Files.readAllBytes(selectedFile.toPath());
                     
-                    String head = "--" + boundary + "\r\n" +
-                                "Content-Disposition: form-data; name=\"invoice_image\"; filename=\"" + selectedFile.getName() + "\"\r\n" +
-                                "Content-Type: " + Files.probeContentType(selectedFile.toPath()) + "\r\n\r\n";
+                    String head = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"invoice_image\"; filename=\"" + selectedFile.getName() + "\"\r\nContent-Type: " + Files.probeContentType(selectedFile.toPath()) + "\r\n\r\n";
                     String tail = "\r\n--" + boundary + "--\r\n";
                     
                     byte[] headBytes = head.getBytes(StandardCharsets.UTF_8);
@@ -185,11 +356,10 @@ public class ScanInvoiceDialog extends JDialog {
                     System.arraycopy(tailBytes, 0, body, headBytes.length + fileBytes.length, tailBytes.length);
 
                     HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create(khongphaigiaodien.ApiConfig.BASE_URL + "/ai/scan-invoice")) // Dùng link động
+                            .uri(URI.create(khongphaigiaodien.ApiConfig.BASE_URL + "/ai/scan-invoice"))
                             .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                            .timeout(java.time.Duration.ofSeconds(60)) // Ép Java kiên nhẫn chờ 60s
-                            .POST(HttpRequest.BodyPublishers.ofByteArray(body))
-                            .build();
+                            .header("Authorization", "Bearer " + adminlienketweb.AuthSession.token) 
+                            .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build();
 
                     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                     JSONObject jsonRes = new JSONObject(response.body());
@@ -200,106 +370,55 @@ public class ScanInvoiceDialog extends JDialog {
                         
                         SwingUtilities.invokeLater(() -> {
                             tableModel.setRowCount(0); 
-                            double tongTienHangChuaThue = 0;
                             currentSupplier = aiData.optString("supplier_name", "Nhà cung cấp chưa rõ");
-                            
+                            double tongTien = 0;
+
                             for (int i = 0; i < items.length(); i++) {
                                 JSONObject item = items.getJSONObject(i);
                                 String tenSP = item.getString("product_name");
+                                String mauMa = item.optString("variant_name", ""); 
                                 int soLuong = item.getInt("quantity");
                                 long donGia = item.getLong("import_price");
+                                tongTien += (soLuong * donGia);
                                 
-                                tongTienHangChuaThue += (soLuong * donGia);
-                                
-                                // LOGIC THẦN THÁNH: KIỂM TRA HÀNG MỚI HAY CŨ
-                                String status = "⚠️ Hàng Mới (Click để thêm)";
-                                if (existingNames.contains(tenSP.toLowerCase().trim())) {
-                                    status = "✅ Đã có trong DB";
+                                String status = "⚠️ SP Mới (Click đúp Tạo SP Gốc)";
+                                // Kiểm tra xem Sản phẩm Gốc đã có trong Database chưa?
+                                if (productMap.containsKey(tenSP.toLowerCase().trim())) {
+                                    if (!mauMa.isEmpty()) {
+                                        // Gốc có rồi, nhưng có thêm Mẫu mã -> Bắt xác nhận Mẫu mã
+                                        status = "⚡ Click đúp Tạo Mẫu Mã";
+                                    } else {
+                                        status = "✅ Đã có (Sẵn sàng nhập)";
+                                    }
                                 }
                                 
-                                tableModel.addRow(new Object[]{ i + 1, tenSP, soLuong, String.format("%,d", donGia), status });
+                                tableModel.addRow(new Object[]{ i + 1, tenSP, mauMa, soLuong, String.format("%,d", donGia), status });
                             }
-                            
-                            currentTaxAmount = tongTienHangChuaThue * (currentTaxPercent / 100.0);
-                            currentTotalAmount = tongTienHangChuaThue + currentTaxAmount;
-                            
-                            String baoCao = String.format("<html>Nhà cung cấp: <b>%s</b> &nbsp;|&nbsp; TỔNG THANH TOÁN: %,.0f VNĐ</html>", 
-                                    currentSupplier, currentTotalAmount);
-                            lblFilePath.setText(baoCao);
-                            
-                            JOptionPane.showMessageDialog(ScanInvoiceDialog.this, "🎉 Quét AI xong! Hãy chú ý các hàng màu đỏ nhé.");
+                            currentTaxAmount = tongTien * (currentTaxPercent / 100.0);
+                            currentTotalAmount = tongTien + currentTaxAmount;
+                            lblFilePath.setText(String.format("<html>Nhà cung cấp: <b>%s</b> | TỔNG THANH TOÁN: %,.0f VNĐ</html>", currentSupplier, currentTotalAmount));
                         });
                     }
                 } catch (Exception ex) {
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(ScanInvoiceDialog.this, "Lỗi Server: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE));
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(ScanInvoiceDialog.this, "Lỗi Server: " + ex.getMessage()));
                 }
                 return null;
             }
-        }.execute();
-    }
-
-    // --- FORM THÊM NHANH SẢN PHẨM TỪ AI ---
-    private void showQuickAddDialog(String prefillName, String prefillQty, String prefillPrice, int rowIndex) {
-        JTextField txtName = new JTextField(prefillName);
-        JTextField txtSku = new JTextField("SKU-AI-" + System.currentTimeMillis() % 10000); // Tạo đại mã SKU
-        JTextField txtPrice = new JTextField(prefillPrice); // Giá bán tạm lấy bằng giá nhập
-        JTextField txtImportPrice = new JTextField(prefillPrice);
-        JTextField txtStock = new JTextField(prefillQty);
-        JTextField txtWarranty = new JTextField("12");
-        JTextField txtSpecs = new JTextField();
-        JTextField txtDesc = new JTextField("Nhập tự động từ AI");
-        
-        JComboBox<CategoryDTO> cbCategory = new JComboBox<>();
-        for (CategoryDTO c : CategoryApi.getAllCategories()) cbCategory.addItem(c);
-        
-        Object[] form = { 
-            "Tên SP (AI đọc):", txtName, 
-            "Mã SKU:", txtSku, 
-            "Giá nhập (AI đọc):", txtImportPrice, 
-            "Giá bán dự kiến:", txtPrice, 
-            "Số lượng nhập (AI đọc):", txtStock,
-            "Danh mục:", cbCategory,
-            "Bảo hành (tháng):", txtWarranty,
-            "Thông số:", txtSpecs
+            @Override
+            protected void done() { loadingDialog.dispose(); } 
         };
-        
-        int result = JOptionPane.showConfirmDialog(this, form, "Tạo nhanh sản phẩm mới", JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE);
-        
-        if (result == JOptionPane.OK_OPTION) {
-            CategoryDTO cat = (CategoryDTO) cbCategory.getSelectedItem();
-            boolean ok = ProductApi.createProduct(
-                txtName.getText(), txtSku.getText(), 
-                Double.parseDouble(txtPrice.getText()), Double.parseDouble(txtImportPrice.getText()), Integer.parseInt(txtStock.getText()), 
-                Integer.parseInt(txtWarranty.getText()), cat.getId(), txtDesc.getText(), txtSpecs.getText(), 1, 1
-            );
-            
-            if (ok) {
-                JOptionPane.showMessageDialog(this, "Đã thêm sản phẩm thành công!");
-                // Cập nhật lại trạng thái trên JTable
-                tableModel.setValueAt(txtName.getText(), rowIndex, 1); // Cập nhật tên lỡ người dùng có sửa
-                tableModel.setValueAt("✅ Đã có trong DB", rowIndex, 4);
-            } else {
-                JOptionPane.showMessageDialog(this, "Thêm thất bại, vui lòng kiểm tra lại!");
-            }
-        }
+        worker.execute(); loadingDialog.setVisible(true); 
     }
 
-    // --- LOGIC LƯU PHIẾU NHẬP ---
     private void saveToDatabase() {
-        if (tableModel.getRowCount() == 0) {
-            JOptionPane.showMessageDialog(this, "Bảng trống!");
-            return;
-        }
-        
-        // KIỂM TRA XEM CÒN HÀNG MỚI CHƯA ĐƯỢC TẠO KHÔNG
+        if (tableModel.getRowCount() == 0) return;
         for (int i = 0; i < tableModel.getRowCount(); i++) {
-            if (tableModel.getValueAt(i, 4).toString().contains("Hàng Mới")) {
-                JOptionPane.showMessageDialog(this, "Cảnh báo: Dòng số " + (i+1) + " là hàng mới.\nVui lòng nhấp đúp vào dòng đó để tạo sản phẩm trước khi lưu Phiếu nhập!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+            if (!tableModel.getValueAt(i, 5).toString().contains("✅")) {
+                JOptionPane.showMessageDialog(this, "Có lỗi ở dòng số " + (i+1) + ".\nVui lòng Click đúp để hoàn thiện dữ liệu (Tạo SP hoặc Mẫu mã) trước khi lưu!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
                 return;
             }
         }
 
-        JOptionPane.showMessageDialog(this, "Đang gửi dữ liệu sang Node.js...");
         try {
             JSONObject dataToSave = new JSONObject();
             dataToSave.put("supplier_name", currentSupplier);
@@ -311,20 +430,18 @@ public class ScanInvoiceDialog extends JDialog {
             for (int i = 0; i < tableModel.getRowCount(); i++) {
                 JSONObject item = new JSONObject();
                 item.put("product_name", tableModel.getValueAt(i, 1).toString());
-                item.put("quantity", Integer.parseInt(tableModel.getValueAt(i, 2).toString()));
-                item.put("import_price", Double.parseDouble(tableModel.getValueAt(i, 3).toString().replace(",", "")));
+                item.put("variant_name", tableModel.getValueAt(i, 2).toString()); 
+                item.put("quantity", Integer.parseInt(tableModel.getValueAt(i, 3).toString()));
+                item.put("import_price", Double.parseDouble(tableModel.getValueAt(i, 4).toString().replace(",", "")));
                 itemsArray.put(item);
             }
             dataToSave.put("items", itemsArray);
 
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(java.time.Duration.ofSeconds(15)) // Chờ kết nối 15s
-                    .build();
-
+            HttpClient client = HttpClient.newBuilder().build();
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(khongphaigiaodien.ApiConfig.BASE_URL + "/import/create")) // Dùng link động
+                    .uri(URI.create(khongphaigiaodien.ApiConfig.BASE_URL + "/import/create"))
                     .header("Content-Type", "application/json")
-                    .timeout(java.time.Duration.ofSeconds(30)) // Lưu DB chờ 30s
+                    .header("Authorization", "Bearer " + adminlienketweb.AuthSession.token) 
                     .POST(HttpRequest.BodyPublishers.ofString(dataToSave.toString(), StandardCharsets.UTF_8))
                     .build();
 
@@ -333,11 +450,10 @@ public class ScanInvoiceDialog extends JDialog {
             
             if (jsonRes.getBoolean("success")) {
                 JOptionPane.showMessageDialog(this, "✅ " + jsonRes.getString("message"));
-                this.dispose(); // Đóng form sau khi lưu thành công
+                this.dispose(); 
             } else {
                 JOptionPane.showMessageDialog(this, "❌ Lỗi: " + jsonRes.getString("message"));
             }
-
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Lỗi kết nối Server", "Lỗi Mạng", JOptionPane.ERROR_MESSAGE);
         }

@@ -206,6 +206,32 @@ public class ProductApi {
             return false;
         }
     }
+    public static boolean updateVariant(int variantId, String group, String name, double additionalPrice) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            String json = """
+            {
+              "variant_group": "%s",
+              "variant_name": "%s",
+              "additional_price": %.2f
+            }
+            """.formatted(group, name, additionalPrice);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    // Gửi lên số 0 thay cho productId vì API Backend Node.js chỉ cần đọc variantId là đủ để UPDATE
+                    .uri(URI.create(ApiConfig.BASE_URL + "/products/0/variants/" + variantId))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + adminlienketweb.AuthSession.token)
+                    .PUT(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
     public static boolean deleteVariant(int variantId) {
         try {
