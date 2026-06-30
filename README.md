@@ -1,15 +1,8 @@
 ### 2. File README.md cho kho App Admin (`linhlinhadmin/README.md`)
 
 ```markdown
-# Phần mềm Quản trị (App Admin) - Hệ thống quản lý và bán đồ điện tử
-
-**Sinh viên thực hiện:** Nguyễn Duy Linh
-**Mã sinh viên:** 73DCTT22299
-**Lớp:** 73DCTT22
-
 ## 1. Giới thiệu
-Đây là mã nguồn **Phần mềm Quản trị nội bộ (Desktop Client)** thuộc Đồ án tốt nghiệp: *"Xây dựng hệ thống quản lý và bán đồ điện tử sử dụng restful api và công cụ client-server"*.
-
+Đây là mã nguồn Phần mềm Quản trị nội bộ (Desktop Client).
 Ứng dụng được xây dựng bằng công nghệ **Java Swing**, cung cấp giao diện trực quan, ổn định và bảo mật dành riêng cho Quản trị viên (Admin) để thực hiện các nghiệp vụ:
 - Quản lý kho hàng, sản phẩm, danh mục.
 - Quản lý và kiểm duyệt đơn hàng.
