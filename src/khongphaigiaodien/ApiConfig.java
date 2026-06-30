@@ -12,8 +12,6 @@ public class ApiConfig {
     // 1. MÔI TRƯỜNG LOCALHOST (Dùng khi code và test dưới máy)
 // public static final String BASE_URL = "http://localhost:3000/api";
 
-    // 2. MÔI TRƯỜNG PUBLIC (Dùng khi chạy thật trên VPS hoặc Render)
-   public static final String BASE_URL = "https://linhlinhstore.shop/api";
-    
-
+    // 2. MÔI TRƯỜNG PUBLIC (Dùng khi chạy thật trên VPS)
+   public static final String BASE_URL = "https://linhlinhstore.shop/api";   
 }
